@@ -1,7 +1,23 @@
-# bomgoa1102 — phản tư cá nhân
+# Nguyễn Trung Dũng (`bomgoa1102`) · Phản tư cá nhân
 
-Tôi phụ trách phần Gather: bơi, oxy, hái, bắt cá và bàn giao kho; sau đó bổ sung cá di chuyển, cá sấu và logic độ tươi. Bằng chứng có trong [kiểm chứng Phase 2](../proof/phase-2/gather.md), [kiểm chứng Phase 3](../proof/phase-3/gather.md) và commit `60f77df`. Tôi chuẩn bị các trường hợp biên để nhóm dùng khi kiểm tra tích hợp.
+**Vai trò** Gather và PO.
 
-AI từng nhầm vai UI và QA khi đề xuất chia việc Phase 3. Đối chiếu lại bảng phân công trong `TEAM.md` cho thấy Duy Hưng phụ trách UI, còn Nhật Minh phụ trách QA. Lỗi này nhắc tôi phải kiểm tra nguồn trong repo trước khi dùng kết quả AI, nhất là khi thông tin nhóm đã thay đổi.
+## Phase 1
 
-Tôi học được rằng test logic riêng đạt chưa đủ để kết luận tính năng hoàn thành: Gather còn phụ thuộc schema kho, runner và phần Quán. Cần kiểm tra lại luồng bàn giao trên bản tích hợp của nhóm.
+Tôi triển khai bơi, oxy, ngạt, ngất rơi đồ LIFO, hái rau, bắt cá và chốt file kho. Tôi hỗ trợ Lâm kiểm tra bàn giao kho giữa hai tiến trình. [Commit cbb23ef](https://github.com/lam2121/K5-L3B-LAB-Day12-AI-SDLC-NhomBaKhi/commit/cbb23ef)
+
+## Phase 2
+
+Tôi thêm cá bơi phản xạ biên, sinh cá định kỳ và Cá Sấu tuần tra, truy đuổi, rơi nửa giỏ khi chạm. [Commit 60685eb](https://github.com/lam2121/K5-L3B-LAB-Day12-AI-SDLC-NhomBaKhi/commit/60685eb)
+
+## Phase 3
+
+Tôi cài đặt hao tươi 0.5/s, phát sự kiện spoiled khi dưới 30 và cấp ID cá thể. AI nhầm vai UI và QA khi chia việc, tôi đối chiếu `TEAM.md` để sửa lại. [Commit 60f77df](https://github.com/lam2121/K5-L3B-LAB-Day12-AI-SDLC-NhomBaKhi/commit/60f77df)
+
+## Phase 4
+
+Tôi chuẩn hóa công thức p1 low FPS cho benchmark Gather và kiểm chứng dữ liệu contract v1.3. Tôi hỗ trợ Minh rà soát các ca kiểm thử độ tươi. [PR #20](https://github.com/lam2121/K5-L3B-LAB-Day12-AI-SDLC-NhomBaKhi/pull/20) · [Kiểm chứng](../proof/phase-4/gather-benchmark.md)
+
+## Bài học
+
+Test riêng đạt là chưa đủ vì Gather gắn chặt với schema kho và runner; luôn cần kiểm thử tích hợp trên commit chung.
