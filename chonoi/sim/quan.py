@@ -97,8 +97,8 @@ class QuanSim:
             self.hand = None
 
         self.time_left_ticks = scenario.get("time_left_ticks", int(round(t["duration_s"] * TICK)))
-        self.total_duration_ticks = int(round(t["duration_s"] * TICK))
-        self.phase_tick = self.total_duration_ticks - self.time_left_ticks
+        self.phase_tick = 0
+        self.random_customers = scenario.get("random_customers", True)
         self.reputation = float(scenario.get("reputation", t["reputation_initial"]))
 
         # Bếp
@@ -126,8 +126,10 @@ class QuanSim:
         unassigned_res = []
         for c in scenario.get("customers", []):
             cust = dict(c)
+            self.ids.reserve(cust["id"])
+            cust.setdefault("state", "waiting")
             cust.setdefault("order_tick", 0)
-            cust.setdefault("order_status", "reserved" if cust.get("state", "waiting") == "waiting" else "served")
+            cust.setdefault("order_status", "reserved" if cust["state"] == "waiting" else "served")
             cust.setdefault("patience_ticks_left", int(round(t["patience_s"] * TICK)))
             cust.setdefault("eat_ticks_left", int(round(t["eat_s"] * TICK)))
             if "reserved" in cust:
@@ -304,6 +306,7 @@ class QuanSim:
                     "order_id": c["id"],
                     "table_id": c["table_id"],
                     "dish_id": c["dish_id"],
+                    "base_price": c["base_price"],
                     "amount": tot,
                     "tip": c["tip"],
                     "reason": "served",
@@ -312,11 +315,12 @@ class QuanSim:
             self.customers.remove(c)
 
         # Khách hết kiên nhẫn
-        left_custs = [c for c in self.customers if c["state"] == "waiting" and c["patience_ticks_left"] <= 0]
+        left_custs = [c for c in self.customers if c["state"] == "waiting" and c["patience_ticks_left"] <= 0
+                      and self.time_left_ticks > 0]
         left_custs = sort_by_id(left_custs)
         for c in left_custs:
             self.reputation = max(float(self.t["reputation_min"]), self.reputation + float(self.t["left_reputation_delta"]))
-            c["reserved"] = []
+            self._discard_order_dish(c["id"])
             events.append((
                 "customer_left",
                 {
@@ -341,6 +345,7 @@ class QuanSim:
                         "order_id": c["id"],
                         "table_id": c["table_id"],
                         "dish_id": c["dish_id"],
+                        "base_price": c["base_price"],
                         "amount": tot,
                         "tip": c["tip"],
                         "reason": "closing",
@@ -371,9 +376,17 @@ class QuanSim:
             return events
 
         # 6. Khách mới đến nếu còn giờ
-        self._check_new_customer(events)
+        if self.random_customers:
+            self._check_new_customer(events)
 
         return events
+
+    def _discard_order_dish(self, order_id):
+        if self.hand and self.hand["order_id"] == order_id:
+            self.hand = None
+        for stove in self.stoves:
+            if stove["dish"] and stove["dish"]["order_id"] == order_id:
+                stove.update(state="idle", dish=None, cook_ticks_left=0, ready_ticks=0)
 
     def _interact(self, events):
         radius = self.t["interact_radius"]
@@ -530,9 +543,9 @@ class QuanSim:
             events.append(("no_dish", {}))
             return
 
-        chosen_dish = self.rng.quan.choice(eligible)
+        chosen_dish = self.rng.get("customer").choice(eligible)
         chosen_items = self._find_best_fresh_items_for_dish(chosen_dish)
-        cust_id = self.ids.allocate("cust")
+        cust_id = self.ids.new("C")
         new_cust = {
             "id": cust_id,
             "table_id": chosen_table["id"],
@@ -565,11 +578,12 @@ class QuanSim:
         self.pos[1] = max(bounds["z"][0], min(bounds["z"][1], self.pos[1]))
 
     def snapshot(self) -> dict:
+        occupied = {customer["table_id"]: customer["id"] for customer in self.customers}
         return {
             "player": {"pos": self.pos, "vel": self.vel},
             "hand": self.hand,
             "stoves": self.stoves,
-            "tables": self.tables,
+            "tables": [{**table, "customer_id": occupied.get(table["id"])} for table in self.tables],
             "customers": self.customers,
             "stock": [
                 {"id": it["id"], "kind": it["kind"], "fresh": round(it["fresh"], 4)}

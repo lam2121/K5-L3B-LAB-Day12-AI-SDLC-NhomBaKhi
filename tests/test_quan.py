@@ -30,7 +30,7 @@ from helpers import Workdir, read_jsonl, run_headless, snapshots, write_json
 
 def make_input(move=(0, 0), interact=False, catch=False):
     held = {"interact": bool(interact), "catch": bool(catch)}
-    edges = {"interact": bool(interact), "catch": bool(catch)}
+    edges = {name for name, pressed in held.items() if pressed}
     return InputState(list(move), held, edges)
 
 
@@ -241,6 +241,73 @@ class TestQuanPhase3PricingAndCooking(unittest.TestCase):
         self.assertEqual(served_ev[0][1]["tip"], 12)
         # Thu boa dương: uy tín +0.2
         self.assertAlmostEqual(sim.reputation, init_rep + 0.2)
+
+
+class TestQuanService(unittest.TestCase):
+    def test_natural_arrival_through_cooking_and_payment(self):
+        tuning = load_contract()["tuning"]
+        sim = QuanSim(tuning, {
+            "player": {"pos": tuning["quan"]["stoves"][0]["pos"]},
+            "time_left_ticks": 2400,
+            "stock": [{"id": "I1", "kind": "ca_loc", "fresh": 100}],
+            "customers": [{"id": "C8", "table_id": "T2", "dish_id": "goi_bong_sung",
+                           "order_status": "unfulfillable", "reserved": []}],
+        }, Streams(42), IdAllocator())
+        idle = make_input()
+        interact = make_input(interact=True)
+        first_arrival = tuning["quan"]["first_customer_tick"]
+
+        for _ in range(first_arrival - 1):
+            self.assertFalse(any(name == "customer_arrived" for name, _ in sim.step(idle)))
+        self.assertIn(("customer_arrived", {"customer_id": "C9", "table_id": "T1",
+                                           "dish_id": "ca_loc_nuong_trui"}), sim.step(idle))
+        self.assertEqual(sim.snapshot()["tables"][0]["customer_id"], "C9")
+        self.assertEqual(sim.customers[-1]["reserved"], ["I1"])
+
+        cooked = dict(sim.step(interact))["cook_started"]
+        self.assertEqual(cooked["order_id"], "C9")
+        for _ in range(sim.stoves[0]["cook_ticks_left"]):
+            sim.step(idle)
+        self.assertIn("dish_picked", dict(sim.step(interact)))
+
+        table_pos = sim.tables[0]["pos"]
+        radius = tuning["quan"]["interact_radius"]
+        for _ in range(240):
+            distance = math.dist(sim.pos, table_pos)
+            if distance <= radius / 2:
+                break
+            direction = [(target - current) / distance for target, current in zip(table_pos, sim.pos)]
+            sim.step(make_input(move=direction))
+        served = dict(sim.step(interact))["served"]
+        self.assertEqual(served["table_id"], "T1")
+        customer = next(c for c in sim.customers if c["id"] == "C9")
+        for _ in range(customer["eat_ticks_left"] - 1):
+            sim.step(idle)
+        paid = dict(sim.step(idle))["paid"]
+        self.assertEqual(paid["base_price"], cooked["base_price"])
+        self.assertEqual(sim.earned, paid["base_price"] + paid["tip"])
+        self.assertIsNone(sim.snapshot()["tables"][0]["customer_id"])
+
+    def test_departure_clears_only_its_dish_and_closing_wins_ties(self):
+        tuning = load_contract()["tuning"]
+        dish = {"order_id": "C1", "dish_id": "ca_loc_nuong_trui", "base_price": 60}
+        initial_reputation = tuning["quan"]["reputation_initial"]
+        for ticks_left, reason in ((2, "patience"), (1, "closing")):
+            for station in ({"hand": dish}, {"stoves": [{"id": "B1", "state": "ready", "dish": dish}]}):
+                with self.subTest(ticks_left=ticks_left, station=station):
+                    sim = QuanSim(tuning, {
+                        "time_left_ticks": ticks_left, "random_customers": False,
+                        "customers": [{"id": "C1", "table_id": "T1", "dish_id": dish["dish_id"],
+                                       "order_status": "assigned", "patience_ticks_left": 1}],
+                        **station,
+                    }, Streams(42), IdAllocator())
+                    result = dict(sim.step(make_input()))
+                    loss = tuning["quan"]["left_reputation_delta"] if reason == "patience" else 0
+                    self.assertEqual(sim.reputation, initial_reputation + loss)
+                    self.assertEqual(result["customer_left"]["reason"], reason)
+                    self.assertIsNone(sim.hand)
+                    self.assertEqual(sim.stoves[0]["state"], "idle")
+                    self.assertEqual(sim.stock, [])
 
 
 class TestQuanPhase3InventoryContract(unittest.TestCase):

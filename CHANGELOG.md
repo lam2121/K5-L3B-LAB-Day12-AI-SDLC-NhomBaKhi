@@ -1,6 +1,13 @@
 # Changelog
 ## Unreleased
 
+### Phase 4
+
+- Khai Test Contract v1.3 với `bench_cmd` và `soak_cmd`. Giữ kho cá thể và cơ chế độ tươi từ v1.2.
+- Nối Gather, Quán và Shop trong campaign thật trên live và headless. Giữ tiến độ xuyên ngày, hỗ trợ pause và áp dụng nâng cấp từ sáng kế tiếp.
+- Thêm tương phản cao, cảnh báo có chữ và biểu tượng cho oxy, thủy quái và khách sắp bỏ đi. Hoàn thiện menu và cảnh demo *Mùa Nước Nổi*.
+- Thêm phép đo render 30 giây và soak 10 ngày có thể lặp lại. [Bằng chứng Phase 4](docs/verification/phase-4.md)
+
 ### Phase 3
 
 - **Breaking change (Test Contract v1.2):**

@@ -17,6 +17,7 @@ Ngẫu nhiên vẫn đi qua `Streams` (seed); chỉ nhịp chạy theo đồng h
 import argparse
 import json
 import os
+import re
 import sys
 import threading
 import time
@@ -24,11 +25,11 @@ import traceback
 from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from .campaign import CampaignSession
 from .contract import DEFAULT_PATH, load_contract
 from .errors import BadInput
 from .inputs import BUTTONS_V10, CAMPAIGN_BUTTONS, InputState, normalize
 from .inventory import read_inventory
+from .live_dive import LiveDiveCampaign
 from .runner import Session
 from .scenario import load_scenario
 
@@ -39,7 +40,10 @@ WEB_FILES = {"index.html": "text/html", "styles.css": "text/css", "phase2.previe
              "phase3.preview.json": "application/json",
              "river-cover.webp": "image/webp",
              **dict.fromkeys(("app.js", "adapter.js", "scenes.js", "art.js", "preview.js",
-                              "campaign.js", "phase2-preview.js", "phase3-preview.js", "inventory-view.js"), "text/javascript")}
+                              "campaign.js", "phase2-preview.js", "phase3-preview.js", "inventory-view.js",
+                              "assets/sprites.js"), "text/javascript")}
+WEB_ATLAS = re.compile(r"assets/[a-z0-9_-]+\.webp")
+LIVE_CAMPAIGN_BUTTONS = (*CAMPAIGN_BUTTONS, "shoot")
 MAX_BODY = 4096
 RECENT_EVENTS = 40
 
@@ -97,7 +101,7 @@ class LiveGame:
 
     def _begin(self, play_mode, mode, scenario, inventory, inventory_out):
         if mode == "campaign":
-            self.session = CampaignSession(self.tuning, scenario, self.seed, introductions=True)
+            self.session = LiveDiveCampaign(self.tuning, scenario, self.seed)
         else:
             self.session = Session(mode, self.tuning, scenario, self.seed, inventory)
         self._phase_args = (play_mode, mode, scenario, inventory, inventory_out)
@@ -105,7 +109,7 @@ class LiveGame:
         self.inventory_out = inventory_out
         self.active = True
         self._session_id += 1
-        self.inputs = _TickInputs(CAMPAIGN_BUTTONS if mode == "campaign" else BUTTONS_V10)
+        self.inputs = _TickInputs(LIVE_CAMPAIGN_BUTTONS if mode == "campaign" else BUTTONS_V10)
         self.events = []
         self._saved = False
         self._inventory_error = None
@@ -152,7 +156,7 @@ class LiveGame:
             self.events.append(row)
         del self.events[:-RECENT_EVENTS]
         if campaign and s.awaiting:
-            self.inputs = _TickInputs(CAMPAIGN_BUTTONS)
+            self.inputs = _TickInputs(LIVE_CAMPAIGN_BUTTONS)
         if self.mode == "gather" and s.done and self.inventory_out:
             self._save_inventory()
 
@@ -188,6 +192,11 @@ class LiveGame:
             if not ok:
                 raise ValueError("move phải là [a, b] trong [-1, 1]")
         with self._lock:
+            if "prepare" in body:
+                if self.mode != "day" or not self.active:
+                    raise ValueError("Mua trang bị trong chế độ Hành trình.")
+                self.session.buy_preparation(body["prepare"])
+                return
             buttons = {}
             for b in self.inputs.down:
                 if b in body:
@@ -273,16 +282,20 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(200, self.game.state_json())
         elif path == "/config":
             self._send(200, json.dumps(self.game.web_config, ensure_ascii=False).encode("utf-8"))
-        elif (name := "index.html" if path == "/" else path.removeprefix("/")) in WEB_FILES:
-            try:
-                with open(os.path.join(WEB_DIR, name), "rb") as f:
-                    content_type = WEB_FILES[name]
+        else:
+            name = "index.html" if path == "/" else path.removeprefix("/")
+            content_type = "image/webp" if WEB_ATLAS.fullmatch(name) else WEB_FILES.get(name)
+            if content_type:
+                try:
+                    with open(os.path.join(WEB_DIR, name), "rb") as f:
+                        body = f.read()
+                except OSError:
+                    pass
+                else:
                     if not content_type.startswith("image/"):
                         content_type += "; charset=utf-8"
-                    self._send(200, f.read(), content_type)
-            except OSError:
-                self._send(404, b'{"error":"thieu index.html"}')
-        else:
+                    self._send(200, body, content_type)
+                    return
             self._send(404, b'{"error":"khong co"}')
 
     def do_POST(self):
