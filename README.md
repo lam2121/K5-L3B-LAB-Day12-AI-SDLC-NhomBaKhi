@@ -78,6 +78,7 @@ Lệnh tự mở Chromium ở 1280×720, dùng Gather thật của checkout vớ
 - Phase 2 chia sông thành ba tầng màu, thêm vạch nước sâu và cá sấu Năm Chèo với phản hồi riêng khi đuổi hoặc bị choáng. Nhà bè có ánh đèn dây, khói trên hai bếp và lời thoại ngắn của khách. [Checklist UI Phase 2](docs/verification/phase-2.md)
 - *Mùa Nước Nổi* thêm lá, hạt phù sa và bọt nước màu vàng ở sông. Giỏ dùng vạch xanh hoặc vàng theo độ tươi, và gạch chéo các ô ươn.
 - Màn mở đầu *Mùa Nước Nổi* minh họa Út Sen chèo ghe qua chợ sớm. Ánh mặt trời phản chiếu trên sông và đèn dầu hắt xuống sàn nhà bè trong hai cảnh chơi. [Kiểm tra giao diện demo](docs/proof/phase-4/ui-demo.md)
+- Trước mỗi chuyến lặn trong **Bắt đầu hành trình**, Út Sen có thể dùng tiền trong ví để mua súng lặn, đạn bong bóng, bình oxy hoặc áo phao. Dưới nước, bấm **F** hoặc **Bắn** để hạ cá sấu gần nhất trong tầm. Tiền bán món và tiền thưởng được giữ sang ngày sau. [Bộ ảnh dụng cụ](chonoi/web/assets/README.md#prompt-tạo-dụng-cụ-lặn)
 
 ## Tự do sáng tạo
 

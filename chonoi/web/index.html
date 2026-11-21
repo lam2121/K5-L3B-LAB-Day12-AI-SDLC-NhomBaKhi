@@ -109,6 +109,14 @@
               <div class="panel-title"><h2>Bắt cá</h2><span id="catch-status"></span></div>
               <div class="meter"><i id="catch-bar"></i></div>
             </section>
+            <section class="panel" id="dive-tool" hidden>
+              <div class="panel-title"><h2>Trang bị lặn</h2><strong id="dive-balance"></strong></div>
+              <div class="dive-tool-row">
+                <span class="gear-icon" data-item="launcher" aria-hidden="true"></span>
+                <div><strong id="dive-ammo"></strong><p id="dive-status" class="fresh-note"></p></div>
+                <button type="button" class="button quiet" id="dive-fire">Bắn <kbd>F</kbd></button>
+              </div>
+            </section>
             <section class="panel" id="harvest-plan" hidden>
               <div class="panel-title"><h2>Cần lấy</h2><span id="harvest-progress-label">Đã lấy / cần</span></div>
               <dl class="ingredients" id="goal-items"></dl>
@@ -191,6 +199,11 @@
             </section>
           </div>
           <div id="shop-upgrades" class="journey-columns" hidden></div>
+          <section id="dive-preparation" aria-labelledby="dive-preparation-title" hidden>
+            <h2 id="dive-preparation-title">Trang bị trước khi lặn</h2>
+            <p id="dive-receipt" class="upgrade-current" role="status" aria-live="polite" hidden></p>
+            <div id="dive-offers" class="dive-offers"></div>
+          </section>
           <div class="result-actions">
             <button type="button" class="button primary" id="journey-next"></button>
             <div class="result-end" id="journey-end" hidden>

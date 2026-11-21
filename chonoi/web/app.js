@@ -14,7 +14,7 @@ const previewCampaign = ["2", "3"].includes(previewVersion);
 const mockVersion = previewVersion === "2" ? "2" : "3";
 const baseAdapter = preview ? new (await import("./preview.js")).PreviewAdapter() : liveAdapter;
 let adapter = baseAdapter;
-const controls = [...document.querySelectorAll("button")];
+const controls = [...document.querySelectorAll("button:not(#dive-fire)")];
 const number = new Intl.NumberFormat("vi-VN");
 const decimal = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 });
 const freshnessNumber = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2, roundingMode: "trunc" });
@@ -75,7 +75,7 @@ if (!benchSignal) {
 }
 const phaseInput = new CampaignInput(send);
 const campaignView = createCampaignView({ $, write, update, element, inventoryList, money, decimal, dishName, time,
-  proceed, action: campaignCommand });
+  proceed, action: campaignCommand, prepare: prepareGear });
 
 async function loadMock() {
   if (mockTuning) return;
@@ -296,6 +296,16 @@ function drawGather(state) {
   const cooldown = ticks(config.catch_cooldown_s);
   meter("catch-bar", cooldown ? 100 - percent(p.catch_cd_ticks, cooldown) : 100);
   write("catch-status", p.catch_cd_ticks > 0 ? "Hồi " + decimal.format(p.catch_cd_ticks / tuning.tick_hz) + " giây" : "Sẵn sàng");
+  const gear = state.dive_gear;
+  $("dive-tool").hidden = !gear;
+  if (gear) {
+    write("dive-balance", money(state.money));
+    write("dive-ammo", gear.launcher ? gear.ammo + " viên đạn" : "Chưa có súng lặn");
+    const status = !gear.launcher ? "Mua trước khi ra sông" : gear.ammo === 0 ? "Hết đạn" :
+      p.at_surface ? "Lặn xuống để bắn" : "Cá sấu trong tầm " + gear.shot_range + " m";
+    write("dive-status", status);
+    $("dive-fire").disabled = !gear.launcher || !gear.ammo || p.at_surface;
+  }
 }
 
 function stationCard(title, status, dishId, timer, { ready = false, price, shortage = false } = {}) {
@@ -457,6 +467,11 @@ function eventMessage(event) {
       const lost = (d.lost ?? []).map(itemKind).filter(Boolean).map(ingredient);
       return ["Cá sấu quẫy mạnh!" + (lost.length ? " Rơi lần lượt " + lost.join(" → ") + "." : ""), "danger"];
     }
+    case "crocodile_defeated": return ["Đã hạ cá sấu · Thưởng +" + money(d.reward), "tip"];
+    case "dive_shot_failed": return [{
+      no_launcher: "Chưa có súng lặn.", no_ammo: "Hết đạn lặn.", surface: "Lặn xuống rồi bắn nghen.",
+      no_target: "Chưa có cá sấu trong tầm bắn.",
+    }[d.reason], "danger"];
     case "faint": {
       const lost = (d.lost ?? []).map(itemKind).filter(Boolean).map(ingredient);
       const reason = ["choke", "oxygen"].includes(d.cause) ? "Út ngất vì hết hơi." : "Út bị cá sấu đánh ngất.";
@@ -529,6 +544,7 @@ function display(state) {
       phaseGate = gate;
     }
     phaseInput.enabled = !snapshot.awaiting && !snapshot.finished && snapshot.state !== "finished";
+    phaseInput.shootEnabled = Boolean(snapshot.dive_gear);
     if (campaignView.render(snapshot, tuning)) {
       show("journey");
       return;
@@ -653,6 +669,13 @@ function proceed(stage) {
   return transition("game", () => adapter.continueDay(stage));
 }
 
+async function prepareGear(item) {
+  if (busy || snapshot?.awaiting !== "day_intro" || !snapshot.dive_gear?.offers?.[item]) return;
+  await transition("game", () => adapter.input({ prepare: item }));
+  const button = [...$("dive-offers").querySelectorAll("[data-prepare]:enabled")].find((option) => option.dataset.prepare === item);
+  (button ?? $("dive-offers").querySelector("[data-prepare]:enabled") ?? $("journey-next")).focus();
+}
+
 function campaignCommand(frame) {
   if (!busy && campaign && phaseInput.enabled && (snapshot.state !== "paused" || frame.pause)) phaseInput.command(frame);
 }
@@ -673,13 +696,15 @@ $("journey-replay").addEventListener("click", () => begin(choice));
 $("journey-menu-button").addEventListener("click", menu);
 $("pause-menu").addEventListener("click", menu);
 for (const id of ["pause", "resume"]) $(id).addEventListener("click", () => campaignCommand({ pause: true }));
+$("dive-fire").addEventListener("click", () => campaignCommand({ shoot: true }));
 $("exit").addEventListener("click", () => leave("exit-screen"));
 $("exit-back").addEventListener("click", () => show("menu"));
 $("bag-panel").addEventListener("animationend", (event) => {
   if (event.animationName === "spoil-flash") $("bag-panel").classList.remove("spoil-alert");
 });
 document.addEventListener("click", (event) => {
-  if (screen === "journey" && snapshot?.awaiting === "day_intro" && !event.target.closest("button, a")) proceed("day_intro");
+  if (screen === "journey" && snapshot?.awaiting === "day_intro" && !snapshot.dive_gear &&
+      !event.target.closest("button, a")) proceed("day_intro");
 });
 
 addEventListener("keydown", (event) => {
@@ -687,8 +712,10 @@ addEventListener("keydown", (event) => {
   if (campaign) {
     if ((code === "Enter" || code === "Space") && event.target instanceof HTMLButtonElement) return;
     const awaiting = snapshot?.awaiting;
+    if (awaiting === "day_intro" && snapshot.dive_gear && code !== "Enter") return;
     const pause = code === "Escape" || code === "KeyP";
-    const inputKey = movement[code] || actionKeys[code] || pause;
+    const fire = code === "KeyF" && snapshot?.phase === "gather" && snapshot.dive_gear;
+    const inputKey = movement[code] || actionKeys[code] || pause || fire;
     if (!inputKey && !(awaiting === "day_intro" || awaiting === "evening_intro")) return;
     event.preventDefault();
     if (!phaseInput.press(event) || busy) return;
@@ -696,6 +723,7 @@ addEventListener("keydown", (event) => {
     else if (pause) campaignCommand({ pause: true });
     else if (screen === "game" && snapshot.state === "playing") {
       if (movement[code]) phaseInput.move = move(phaseInput.keys);
+      else if (fire) campaignCommand({ shoot: true });
       else if (code !== "Space" || snapshot.phase === "gather") campaignCommand({ [actionKeys[code]]: true });
     }
     return;

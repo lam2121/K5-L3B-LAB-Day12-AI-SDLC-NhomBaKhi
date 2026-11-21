@@ -1,4 +1,6 @@
-import { shore, river, deck, dockArt, plant, school, crocodile, utSen, stoveArt, tableArt, mealArt, coverArt } from "./art.js";
+import { shore, river, riverScenery, deck, dockArt, plant, school, crocodile, diveShot,
+  utSen, utSenOnWater, stoveArt, tableArt, mealArt, coverArt } from "./art.js";
+import { spriteReady } from "./assets/sprites.js";
 
 const tau = Math.PI * 2;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -35,14 +37,17 @@ export function findAction(state) {
     return null;
   }
 
-  const options = [
-    ...state.stoves.map((stove) => ({
-      pos: stove.pos, label: stove.state === "idle" ? "Tương tác với bếp" : stove.state === "ready" ? "Bưng món" : "Xem bếp",
-    })),
-    ...state.tables.map((table) => ({
-      pos: table.pos, label: state.hand?.order_id === table.customer_id ? "Phục vụ bàn " + table.id : "Tương tác với bàn",
-    })),
-  ];
+  const options = [];
+  const hasOrder = state.customers.some((customer) => customer.order_status === "reserved");
+  for (const stove of state.stoves) {
+    if (stove.state === "idle" && hasOrder) options.push({ pos: stove.pos, label: "Nấu món" });
+    if (stove.state === "ready" && !state.hand) options.push({ pos: stove.pos, label: "Bưng món" });
+  }
+  if (state.hand) {
+    const customer = state.customers.find((candidate) => candidate.id === state.hand.order_id && candidate.state === "waiting");
+    const table = customer && state.tables.find(({ id }) => id === customer.table_id);
+    if (table) options.push({ pos: table.pos, label: "Phục vụ bàn " + table.id });
+  }
   const item = nearest(here, options, meta.interact_radius);
   return item ? { key: "E", text: item.label, pos: item.pos, radius: .85 } : null;
 }
@@ -111,7 +116,7 @@ function cachedShore() {
   let previousKey;
   return (ctx, w, h, horizon, drift) => {
     const ratio = ctx.getTransform().a;
-    const key = [w, h, horizon, drift, ratio].join("/");
+    const key = [w, h, horizon, drift, ratio, spriteReady("dawn_sky")].join("/");
     if (key !== previousKey) {
       const width = Math.round(w * ratio);
       const height = Math.round(h * ratio);
@@ -147,6 +152,7 @@ function worldGather(ctx, w, h, state, action, t, hz, v2, floodSeason, drawShore
   const tiers = v2 && Number.isFinite(dangerDepth) && dangerDepth < deepDepth && deepDepth < bottom
     ? [y(dangerDepth), y(deepDepth)] : undefined;
   river(ctx, w, h, horizon, y(bottom), viewX * scale, t, tiers, floodSeason);
+  riverScenery(ctx, w, horizon, viewX * scale, scale, t);
   if (contrast) {
     ctx.fillStyle = "#07131ba8";
     ctx.fillRect(0, 0, w, h);
@@ -173,7 +179,7 @@ function worldGather(ctx, w, h, state, action, t, hz, v2, floodSeason, drawShore
 
   const [dockX, dockD] = meta.dock_pos;
   ring(ctx, x(dockX), y(dockD), scale * meta.dock_radius, "#ffdfa7b5", true);
-  dockArt(ctx, x(dockX), y(dockD), scale);
+  const platformHalfWidth = dockArt(ctx, x(dockX), y(dockD), scale);
   if (x(dockX) >= 0 && x(dockX) < w) label(ctx, "Bến", Math.max(25, x(dockX)), y(dockD) + 28, tag);
 
   for (const node of state.nodes) {
@@ -222,8 +228,17 @@ function worldGather(ctx, w, h, state, action, t, hz, v2, floodSeason, drawShore
   }
   ctx.save();
   if (v2 && player.invuln_ticks > 0 && Math.floor(t * 9) % 2 === 0) ctx.globalAlpha = .32;
-  utSen(ctx, ...p, scale, player.heading_deg * Math.PI / 180, player.vel, t, true, !player.at_surface);
+  const heading = player.heading_deg * Math.PI / 180;
+  const onDock = pd === dockD && Math.abs(p[0] - x(dockX)) <= platformHalfWidth;
+  if (player.at_surface && !onDock) utSenOnWater(ctx, p[0], horizon, scale, heading, t);
+  else utSen(ctx, p[0], onDock ? p[1] - 3 : p[1], scale, heading, player.vel, t, true, !player.at_surface);
   ctx.restore();
+  const shot = state.dive_gear && state.events?.findLast((event) => event.name === "crocodile_defeated" && event.day === state.day);
+  if (shot && state.tick - shot.tick < hz * .4) {
+    const { from, to } = shot.data;
+    const progress = t === 0 ? .3 : (state.tick - shot.tick) / (hz * .4);
+    diveShot(ctx, x(from[0]), y(from[1]), x(to[0]), y(to[1]), progress);
+  }
 }
 
 function worldQuan(ctx, w, h, state, action, t, v2, contrast) {
@@ -279,6 +294,7 @@ export function createRenderer(cover, canvas, onPresented) {
   let previousMs;
   let time = 0;
   let contrast = false;
+  let landscapeReady = false;
   let pendingPresentation = false;
   const drawShore = cachedShore();
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
@@ -296,6 +312,11 @@ export function createRenderer(cover, canvas, onPresented) {
     }
     if (!frozen && previousMs !== undefined) time += Math.min(100, ms - previousMs) / 1000;
     previousMs = ms;
+    if (!landscapeReady && spriteReady("dawn_sky")) {
+      landscapeReady = true;
+      dirty = true;
+      drawCover();
+    }
     if (current && tuning && (!frozen || dirty)) {
       const frame = fit(canvas);
       if (frame) {
@@ -324,13 +345,24 @@ export function createRenderer(cover, canvas, onPresented) {
       action = target;
       const previous = current;
       current = snapshot;
+      if (snapshot.monsters?.length && previous?.mode === snapshot.mode &&
+          previous.session_id === snapshot.session_id && previous.tick <= snapshot.tick) {
+        const monsters = snapshot.monsters.map((monster) => {
+          const before = previous.monsters?.find(({ id }) => id === monster.id);
+          if (!before) return monster;
+          const dx = monster.pos[0] - before.pos[0];
+          const facingLeft = dx !== 0 && monster.state !== "recoil" ? dx < 0 : before.facingLeft;
+          return { ...monster, facingLeft };
+        });
+        current = { ...current, monsters };
+      }
       // Starter quán chưa có vel. Khoảng dịch chuyển giữa hai snapshot chỉ dùng để vẽ bước chân.
       if (!snapshot.player.vel && previous && previous.session_id === snapshot.session_id) {
         const elapsed = (snapshot.tick - previous.tick) / tuning.tick_hz;
         const velocity = elapsed > 0
           ? snapshot.player.pos.map((pos, axis) => (pos - previous.player.pos[axis]) / elapsed)
           : previous.player.vel;
-        current = { ...snapshot, player: { ...snapshot.player, vel: velocity } };
+        current = { ...current, player: { ...snapshot.player, vel: velocity } };
       }
     },
   };

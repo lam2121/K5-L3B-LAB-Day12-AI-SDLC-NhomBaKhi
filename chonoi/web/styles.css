@@ -258,6 +258,25 @@ kbd { display: inline-block; vertical-align: .03em; border: 1px solid #678273; b
 .journey-stats > div { border-radius: 8px; padding: 7px; background: #142820; }
 .journey-stats dt, .upgrade-current { color: var(--muted); }
 .journey-stats dd { font-weight: 800; color: var(--gold); }
+#dive-preparation { display: grid; gap: 8px; margin-top: 14px; }
+#dive-preparation[hidden] { display: none; }
+.dive-offers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.dive-offer { display: grid; align-content: start; gap: 6px; }
+.dive-offer p, .dive-tool-row p { margin: 0; }
+.dive-offer .button, #dive-fire { min-height: 44px; }
+.gear-heading { display: flex; align-items: center; gap: 6px; }
+.gear-heading h3 { font-size: 1rem; margin: 0; }
+.gear-icon { width: 52px; height: 52px; flex: none; background: url("./assets/dive_gear.webp") no-repeat; background-size: 200% 200%; }
+.gear-icon[data-item="ammo"] { background-position: 100% 0; }
+.gear-icon[data-item="oxygen"] { background-position: 0 100%; }
+.gear-icon[data-item="hp"] { background-position: 100% 100%; }
+.dive-tool-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dive-tool-row > div { flex: 1; min-width: 104px; }
+.dive-tool-row .gear-icon { width: 42px; height: 42px; }
+@media (max-width: 760px) {
+  .dive-offers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gear-heading .gear-icon { width: 40px; height: 40px; }
+}
 .journey[data-screen="summary"] .journey-stats > div:last-child { border: 1px solid var(--gold); padding: 6px; }
 .upgrade-card button:disabled { cursor: default; }
 .upgrade-card p { margin-top: 3px; }

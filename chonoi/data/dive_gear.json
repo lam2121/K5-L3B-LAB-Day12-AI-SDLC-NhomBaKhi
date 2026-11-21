@@ -1,0 +1,10 @@
+{
+  "starting_money": 180,
+  "launcher_price": 150,
+  "launcher_ammo": 2,
+  "ammo_price": 45,
+  "ammo_pack": 3,
+  "ammo_max": 8,
+  "shot_range": 12,
+  "crocodile_reward": 30
+}

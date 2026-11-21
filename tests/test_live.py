@@ -29,6 +29,25 @@ def _post(url, obj):
 
 
 class LiveServerTest(unittest.TestCase):
+    def test_webp_atlases_are_served_in_live_game(self):
+        server = LiveServer(LiveGame("gather", load_contract()["tuning"], {}, 1), port=0)
+        server.start()
+        try:
+            for name in ("landscape.webp", "crocodile.webp"):
+                with self.subTest(name=name), urllib.request.urlopen(server.url + "assets/" + name, timeout=5) as response:
+                    self.assertEqual(response.status, 200)
+                    self.assertEqual(response.headers.get_content_type(), "image/webp")
+                    header = response.read(12)
+                    self.assertEqual(header[:4], b"RIFF")
+                    self.assertEqual(header[8:], b"WEBP")
+            for name in ("missing.webp", "../river-cover.webp", "README.md"):
+                with self.subTest(name=name), self.assertRaises(urllib.error.HTTPError) as error:
+                    urllib.request.urlopen(server.url + "assets/" + name, timeout=5)
+                self.assertEqual(error.exception.code, 404)
+                error.exception.close()
+        finally:
+            server.stop()
+
     def test_state_input_and_clean_stop(self):
         tuning = load_contract()["tuning"]
         server = LiveServer(LiveGame("gather", tuning, {}, 1), port=0)  # cổng ngẫu nhiên

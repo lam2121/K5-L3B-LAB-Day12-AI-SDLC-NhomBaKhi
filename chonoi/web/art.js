@@ -1,8 +1,16 @@
 // Hình minh họa Canvas gốc. Các số ở đây chỉ mô tả vị trí, màu và hình dáng nét vẽ.
+import { drawBackdrop, drawSprite, spriteReady } from "./assets/sprites.js";
+
 const TAU = Math.PI * 2;
 const sand = "#f3c782";
 const ink = "#17352f";
 const rust = "#be674e";
+const guestSprites = ["guest_fisher", "guest_woman", "guest_vendor"];
+const swimFrames = ["swim_reach", "swim_pull", "swim_kick", "swim_pull"];
+const walkFrames = ["walk_left_step", "walk_pass", "walk_right_step", "walk_pass"];
+const stiltHouses = ["house_terracotta", "house_tin", "house_thatch"];
+const crocodilePatrol = ["crocodile_patrol_up", "crocodile_patrol_mid", "crocodile_patrol_down", "crocodile_patrol_mid"];
+const crocodileChase = ["crocodile_chase_up", "crocodile_chase_mid", "crocodile_chase_down", "crocodile_chase_mid"];
 
 function sample(n) {
   const v = Math.sin(n * 127.1 + 23.4) * 43758.5453;
@@ -84,6 +92,18 @@ export function shore(ctx, w, h, horizon, drift = 0) {
   ctx.fillRect(0, 0, w, h);
   if (horizon <= 0) return;
 
+  const unit = Math.min(28, horizon * .19);
+  if (drawBackdrop(ctx, "dawn_sky", w, horizon)) {
+    const step = (w + 130) / stiltHouses.length;
+    for (let i = 0; i < stiltHouses.length; i++) {
+      const phase = (w * .21 + i * step - drift * .22) % (w + 130);
+      const x = (phase < 0 ? phase + w + 130 : phase) - 55;
+      nipa(ctx, x + step * .54, horizon, unit * 1.45, "#315d4d", i);
+      drawSprite(ctx, stiltHouses[i], x, horizon + 1, unit * (i === 0 ? 3.15 : 2.64), 1);
+    }
+    return;
+  }
+
   const size = Math.min(w * .06, horizon * .26);
   const sunX = w * .69 - drift * .034;
   const sunY = horizon * .41;
@@ -114,7 +134,6 @@ export function shore(ctx, w, h, horizon, drift = 0) {
     ctx.lineTo(w, horizon);
     ctx.fill();
   }
-  const unit = Math.min(28, horizon * .19);
   for (let i = -1; i < 8; i++) {
     const x = i * (w / 7 + 16) - (drift * .19) % (w / 7 + 16);
     if (i % 3 === 1) house(ctx, x + 10, horizon - 3, unit, "#3d5446", "#755844", "#ffb862");
@@ -145,7 +164,7 @@ export function river(ctx, w, h, horizon, floor, drift = 0, t = 0, tiers, floodS
     shape(ctx, "#d6e6a008", [x, horizon], [x + w * .06, horizon],
       [x + w * .26, (h + horizon) * .5], [x + w * .23, (h + horizon) * .56]);
   }
-  const reflectionX = w * .69 - drift * .034;
+  const reflectionX = spriteReady("dawn_sky") ? w * .837 : w * .69 - drift * .034;
   for (let i = 0; i < 9; i++) {
     const wave = Math.sin(t * 1.6 + i * 1.8);
     const span = w * (.016 + i * .004) * (.83 + wave * .17);
@@ -181,14 +200,45 @@ export function river(ctx, w, h, horizon, floor, drift = 0, t = 0, tiers, floodS
 
 export function dockArt(ctx, x, y, scale) {
   const s = Math.max(9, scale);
-  house(ctx, x, y - .16 * s, s * .87, "#7e563c", "#a75240", "#f3b477");
-  shape(ctx, "#986644", [x - s * 1.65, y - 4], [x + s * 1.65, y - 4], [x + s * 1.92, y + 1], [x - s * 1.72, y + 1]);
+  const platformHalfWidth = s * 1.65;
+  if (!drawSprite(ctx, "house_tin", x, y - 2, s * 4, 1)) {
+    house(ctx, x, y - .16 * s, s * .87, "#7e563c", "#a75240", "#f3b477");
+  }
+  shape(ctx, "#986644", [x - platformHalfWidth, y - 4], [x + platformHalfWidth, y - 4], [x + s * 1.92, y + 1], [x - s * 1.72, y + 1]);
   for (const i of [-1.43, .28, 1.69]) stroke(ctx, "#644b36", 2, [x + i * s, y - 1], [x + i * s, y + 8]);
+  return platformHalfWidth;
+}
+
+export function riverScenery(ctx, w, horizon, drift, scale, t) {
+  const size = Math.min(1.4, Math.max(.75, scale / 12));
+  const span = w + 120;
+  const travel = w * .91 - drift * .25 + t * 7;
+  const boatX = ((travel % span) + span) % span - 60;
+  const boatY = horizon + Math.sin(t * 2) * 1.4;
+  ctx.save();
+  ctx.translate(boatX, boatY);
+  ctx.rotate(Math.sin(t * 1.6) * .022);
+  drawSprite(ctx, "river_boat", 0, 0, 78 * size, .82);
+  ctx.restore();
+
+  for (const [index, fraction] of [.24, .72].entries()) {
+    const x = fraction * w + Math.sin(t * .72 + index * 3) * 9;
+    const y = horizon + 8 + Math.sin(t * 2.1 + index) * 1.4;
+    drawSprite(ctx, "water_hyacinth", x, y, 18 * size, .81);
+  }
+  for (const [index, fraction] of [.05, .95].entries()) {
+    ctx.save();
+    ctx.translate(fraction * w, horizon - 1);
+    ctx.rotate(Math.sin(t * 1.6 + index) * .074);
+    drawSprite(ctx, "river_reeds", 0, 0, 29 * size, 1);
+    ctx.restore();
+  }
 }
 
 export function plant(ctx, x, y, kind, ready, scale) {
   const s = Math.max(8, scale * .7);
   const lotus = kind === "bong_sung";
+  if (ready && drawSprite(ctx, kind, x, y + 4, s * 2.5, .91)) return;
   for (const [dx, dy] of [[-7, -1], [5, 1]]) oval(ctx, x + dx, y + dy, s * .71, s * .25, ready ? "#3c7953" : "#457160");
   if (!ready) return;
   for (let i = 0; i < 3; i++) {
@@ -216,8 +266,19 @@ export function school(ctx, x, y, fish, scale, t) {
   const moss = fish.kind === "ca_loc";
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate((fish.heading_deg ?? 0) * Math.PI / 180);
+  const heading = (fish.heading_deg ?? 0) * Math.PI / 180;
+  ctx.rotate(heading);
+  if (Math.cos(heading) < 0) ctx.scale(1, -1);
   const wave = Math.sin(t * 2 + fish.pos[0]);
+  const kick = t * 10 + fish.pos[0];
+  if (drawSprite(ctx, fish.kind, 0, wave * 1.4, size * 1.8, .5, Math.sin(kick) * .34)) {
+    if (fish.kind === "ca_linh") {
+      drawSprite(ctx, fish.kind, -size * .65, size * .48, size * 1.08, .5, Math.sin(kick + 1.7) * .34);
+      drawSprite(ctx, fish.kind, size * .58, -size * .31, size, .5, Math.sin(kick + 3.1) * .34);
+    }
+    ctx.restore();
+    return;
+  }
   if (fish.kind === "ca_keo") {
     shape(ctx, "#716d83", [-size * .46, 0], [-size, -size * .24], [-size * .88, size * .19]);
     oval(ctx, 0, wave * 1.4, size * .68, size * .16, "#a5a7c1");
@@ -231,17 +292,23 @@ export function school(ctx, x, y, fish, scale, t) {
 }
 
 export function crocodile(ctx, x, y, scale, monster, time) {
-  const sway = Math.sin(time * (monster.state === "chase" ? 10 : 4)) * 4;
   const chase = monster.state === "chase";
+  const recoil = monster.state === "recoil";
+  const sway = Math.sin(time * (chase ? 10 : 4)) * 4;
+  const frames = chase ? crocodileChase : crocodilePatrol;
+  const frame = frames[recoil ? 1 : Math.floor(time * (chase ? 9 : 5)) % frames.length];
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate((monster.heading_deg ?? 0) * Math.PI / 180);
   const size = Math.min(1.7, Math.max(.85, scale / 12));
-  ctx.scale(size, size);
-  ctx.globalAlpha = monster.state === "recoil" ? .58 : 1;
+  ctx.scale(monster.facingLeft ? -size : size, size);
+  ctx.globalAlpha = recoil ? .58 : 1;
   if (chase) {
     oval(ctx, 0, 0, 42, 14, "#e9645d44");
     stroke(ctx, "#ff9d8075", 1.6, [-65, -8], [-35, -4], [-55, 0]);
+  }
+  if (drawSprite(ctx, frame, 0, sway * .12, 86) || drawSprite(ctx, "ca_sau", 0, sway * .12, 83)) {
+    ctx.restore();
+    return;
   }
   shape(ctx, "#627e53", [-10, -5], [-27, -2], [-46, sway], [-22, 6], [-8, 7]);
   oval(ctx, -4, 0, 18, 8, "#74945f");
@@ -253,7 +320,87 @@ export function crocodile(ctx, x, y, scale, monster, time) {
   ctx.restore();
 }
 
+export function diveShot(ctx, fromX, fromY, toX, toY, progress) {
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+  const angle = Math.atan2(dy, dx);
+  ctx.save();
+  ctx.globalAlpha = 1 - progress;
+  ctx.save();
+  ctx.translate(fromX, fromY);
+  ctx.rotate(angle);
+  if (dx < 0) ctx.scale(1, -1);
+  drawSprite(ctx, "dive_launcher", 13, 4, 20);
+  ctx.restore();
+
+  const length = Math.hypot(dx, dy);
+  const head = Math.min(1, progress * 3 + .28);
+  const start = Math.min(head, length ? 22 / length : 0);
+  for (let index = 0; index < 5; index++) {
+    const at = start + (head - start) * (index + 1) / 5;
+    const size = 1.6 + index * .35;
+    oval(ctx, fromX + dx * at, fromY + dy * at, size, size, "#d5fff2");
+  }
+  if (head === 1) {
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#d5fff2";
+    ctx.beginPath();
+    ctx.arc(toX, toY, 7 + progress * 11, 0, TAU);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 export function utSen(ctx, x, y, scale, angle, velocity = [0, 0], t = 0, side = true, diving = true) {
+  const size = Math.min(1.8, Math.max(.83, scale / 12));
+  const swimming = side && diving;
+  const sprite = swimming ? "ut_sen_swim" : side ? "ut_sen_shore" : "ut_sen_deck";
+  const speed = Math.hypot(...velocity);
+  const bob = Math.min(1, speed) * Math.sin(t * 10);
+  const frames = swimming ? swimFrames : !side ? walkFrames : null;
+  ctx.save();
+  ctx.translate(x, y);
+  if (swimming) {
+    ctx.rotate(angle);
+    if (Math.cos(angle) < 0) ctx.scale(1, -1);
+  } else if (side ? Math.cos(angle) < 0 : velocity[0] < 0) ctx.scale(-1, 1);
+  const extent = size * (swimming ? 39 : 36);
+  const animated = frames && speed > .1 && drawSprite(ctx,
+    frames[Math.floor(t * (swimming ? 7 : 9)) % frames.length], 0, bob, extent, swimming ? .48 : .96);
+  const painted = animated || drawSprite(ctx, sprite, 0, bob, extent, swimming ? .5 : .92);
+  if (!painted && side && !diving) {
+    utSenCanvas(ctx, 0, bob - size * 16, scale, -Math.PI / 2, velocity, t, true, false);
+  }
+  ctx.restore();
+  if (!painted && (swimming || !side)) utSenCanvas(ctx, x, y, scale, angle, velocity, t, side, diving);
+}
+
+export function utSenOnWater(ctx, x, waterline, scale, angle, t) {
+  const height = Math.min(1.8, Math.max(.83, scale / 12)) * 36;
+  const bob = Math.sin(t * 3) * 1.4;
+  const ripple = height * (.36 + Math.sin(t * 3) * .035);
+  oval(ctx, x, waterline + 2, ripple, 3, "#365e5366");
+
+  ctx.save();
+  ctx.translate(x, waterline);
+  // Only the head and shoulders rise above the river surface.
+  ctx.beginPath();
+  ctx.rect(-height / 2, -height, height, height + 1);
+  ctx.clip();
+  if (Math.cos(angle) < 0) ctx.scale(-1, 1);
+  if (!drawSprite(ctx, "ut_sen_shore", 0, bob, height, .43)) {
+    utSenCanvas(ctx, 0, bob + 2, scale, -Math.PI / 2, [0, 0], t, true, false);
+  }
+  ctx.restore();
+
+  ctx.strokeStyle = "#f4e1b5c7";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.ellipse(x, waterline + 1, ripple, 2.5, 0, 0, Math.PI);
+  ctx.stroke();
+}
+
+function utSenCanvas(ctx, x, y, scale, angle, velocity = [0, 0], t = 0, side = true, diving = true) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle);
@@ -338,12 +485,24 @@ export function deck(ctx, w, h, x, y, width, height, t) {
   for (let i = 1; i <= 9; i++) ctx.lineTo(x + i * width / 9, line(i));
   ctx.stroke();
   for (let i = 0; i <= 9; i++) {
-    lamp(ctx, x + i * width / 9, line(i), t);
+    const lampX = x + i * width / 9;
+    const lampY = line(i);
+    if (i % 3 === 1) {
+      ctx.save();
+      ctx.translate(lampX, lampY);
+      ctx.rotate(Math.sin(t * 2 + i) * .15);
+      const lit = drawSprite(ctx, "hanging_lantern", 0, 1, Math.min(22, height * .095), 0);
+      ctx.restore();
+      if (!lit) lamp(ctx, lampX, lampY, t);
+    } else lamp(ctx, lampX, lampY, t);
     const shimmer = x + i * width / 9 + Math.sin(t * 1.65 + i) * 4;
     const below = y + height + 12 + i % 3 * 2;
     stroke(ctx, "#f2c68157", 1.15, [shimmer - 5, below], [shimmer + 7, below]);
     stroke(ctx, "#f2c68126", 1, [shimmer - 10, below + 5], [shimmer + 8, below + 5]);
   }
+  const propSize = Math.min(39, height * .15);
+  drawSprite(ctx, "woven_basket", x + width * .91, y + height * .16, propSize, .85);
+  drawSprite(ctx, "clay_jars", x + width * .07, y + height * .92, propSize, .92);
 }
 
 export function mealArt(ctx, x, y, size) {
@@ -355,15 +514,20 @@ export function mealArt(ctx, x, y, size) {
 
 export function stoveArt(ctx, x, y, scale, state, t) {
   const s = Math.max(9, .55 * scale);
-  ctx.fillStyle = "#5a3c30";
-  ctx.fillRect(x - s * 1.22, y - s * .78, s * 2.44, s * 1.75);
-  ctx.fillStyle = "#97816b";
-  ctx.fillRect(x - s * 1.12, y - s * .92, s * 2.24, s * 1.61);
-  oval(ctx, x, y, s * .85, s * .71, "#383a32");
+  if (state === "cooking") oval(ctx, x, y + s * .62, s * 1.18, s * .36, "#ed934965");
+  const painted = drawSprite(ctx, "stove", x, y + s * .12, s * 2.15, .6);
+  if (!painted) {
+    ctx.fillStyle = "#5a3c30";
+    ctx.fillRect(x - s * 1.22, y - s * .78, s * 2.44, s * 1.75);
+    ctx.fillStyle = "#97816b";
+    ctx.fillRect(x - s * 1.12, y - s * .92, s * 2.24, s * 1.61);
+    oval(ctx, x, y, s * .85, s * .71, "#383a32");
+  }
   if (state === "ready") {
-    oval(ctx, x, y, s * 1.11, s * .94, "#f6d08168");
-    mealArt(ctx, x, y, s * .76);
-  } else {
+    const dishY = painted ? y - s * .78 : y;
+    oval(ctx, x, dishY, s * 1.02, s * .65, "#f6d08180");
+    mealArt(ctx, x, dishY, s * .67);
+  } else if (!painted) {
     oval(ctx, x, y, s * .69, s * .53, state === "cooking" ? "#c87345" : "#6b6150");
     oval(ctx, x, y - 1, s * .48, s * .36, state === "cooking" ? "#ebc176" : "#837a64");
     oval(ctx, x, y - 1, s * .18, s * .17, "#65543f");
@@ -379,16 +543,21 @@ export function stoveArt(ctx, x, y, scale, state, t) {
 
 export function tableArt(ctx, x, y, scale, customer) {
   const s = Math.max(10, .67 * scale);
-  oval(ctx, x, y + 3, s, s, "#604130");
-  oval(ctx, x, y, s, s, "#cb9a6d");
-  oval(ctx, x, y, s * .87, s * .87, "#956144");
-  stroke(ctx, "#b48054", 1, [x - s * .7, y - 2], [x + s * .7, y - 2]);
+  const suffix = customer?.id.match(/\d+$/)?.[0] ?? "1";
+  const seated = customer && drawSprite(ctx, guestSprites[(Number(suffix) + 2) % guestSprites.length], x, y, s * 1.85, .88);
+  if (!drawSprite(ctx, "table", x, y + s * .12, s * 2.22, .52)) {
+    oval(ctx, x, y + 3, s, s, "#604130");
+    oval(ctx, x, y, s, s, "#cb9a6d");
+    oval(ctx, x, y, s * .87, s * .87, "#956144");
+    stroke(ctx, "#b48054", 1, [x - s * .7, y - 2], [x + s * .7, y - 2]);
+  }
   oval(ctx, x + s * .3, y - s * .29, s * .15, s * .15, "#edd3aa");
   if (customer) {
-    oval(ctx, x, y - s * .89, s * .49, s * .41, "#77946a");
-    oval(ctx, x, y - s * .98, s * .29, s * .29, "#efb183");
-    if (customer.state === "eating") mealArt(ctx, x, y + s * .15, s * .5);
-    else oval(ctx, x, y, s * .24, s * .24, "#f4d9ad");
+    if (!seated) {
+      oval(ctx, x, y - s * .89, s * .49, s * .41, "#77946a");
+      oval(ctx, x, y - s * .98, s * .29, s * .29, "#efb183");
+    }
+    if (customer.state === "eating") mealArt(ctx, x, y - s * .1, s * .48);
   }
 }
 
@@ -412,7 +581,7 @@ export function coverArt(ctx, w, h) {
   plant(ctx, w * .88, horizon + s * 1.05, "bong_sung", true, s * 1.2);
   plant(ctx, w * .82, horizon + s * 1.2, "bong_dien_dien", true, s * .8);
   const p = [w * .41, h * .8];
-  utSen(ctx, ...p, s * 1.2, .22);
+  utSenCanvas(ctx, ...p, s * 1.2, .22);
   for (let i = 0; i < 4; i++) {
     ctx.strokeStyle = "#d9e9c8a4";
     ctx.lineWidth = 1;

@@ -4,6 +4,11 @@ const noticeNames = {
   oxygen: ["Bình oxy", "oxygen_max_s", "giây"],
   hp: ["Áo phao", "hp_max", "máu"],
 };
+const gearNames = { launcher: "Súng lặn", ammo: "Đạn bong bóng" };
+const blockedOffer = {
+  funds: "Chưa đủ tiền", owned: "Đã có súng", ammo_limit: "Túi đạn gần đầy",
+  requires_launcher: "Cần có súng", max_level: "Đã đạt cấp tối đa",
+};
 
 export const upgradeName = (id) => noticeNames[id]?.[0] ?? id;
 
@@ -61,6 +66,7 @@ export class CampaignInput {
     const pulse = this.pulsed ? undefined : this.queue.shift();
     this.pulsed = Boolean(pulse);
     const frame = { move: this.move, interact: false, catch: false, pause: false, shop_done: false, ...pulse };
+    if (this.shootEnabled) frame.shoot = pulse?.shoot ?? false;
     const signature = JSON.stringify(frame);
     if (signature === this.previous) return;
     this.previous = signature;
@@ -113,7 +119,7 @@ class ShiftLog {
   }
 }
 
-export function createCampaignView({ $, write, update, element, inventoryList, money, decimal, dishName, time, proceed, action }) {
+export function createCampaignView({ $, write, update, element, inventoryList, money, decimal, dishName, time, proceed, action, prepare }) {
   let book = new ShiftLog();
   let introTimer;
   let screenKey;
@@ -160,6 +166,41 @@ export function createCampaignView({ $, write, update, element, inventoryList, m
     })));
   }
 
+  function gearTitle(id, name) {
+    const group = element("div", "", "gear-heading");
+    const icon = element("span", "", "gear-icon");
+    icon.dataset.item = id;
+    icon.setAttribute("aria-hidden", "true");
+    group.append(icon, element("h3", name));
+    return group;
+  }
+
+  function preparationCards(gear) {
+    const receipt = gear.purchase;
+    $("dive-receipt").hidden = !receipt;
+    if (receipt) write("dive-receipt", "Đã mua " + (gearNames[receipt.item] ?? upgradeName(receipt.item)).toLowerCase() + " · " + money(receipt.price));
+    update("dive-offers", gear.offers, (container) => {
+      container.replaceChildren(...Object.entries(gear.offers).filter(([id]) => gearNames[id] || noticeNames[id]).map(([id, offer]) => {
+        const card = element("article", "", "panel dive-offer");
+        const upgrade = noticeNames[id];
+        let detail;
+        if (id === "launcher") detail = "Kèm " + offer.quantity + " viên · Tầm " + gear.shot_range + " m";
+        else if (id === "ammo") detail = offer.quantity + " viên mỗi gói";
+        else if (offer.level) detail = "Cấp " + offer.level + " · " + offer[upgrade[1]] + " " + upgrade[2];
+        else detail = "Đang dùng cấp tối đa";
+        const button = element("button", offer.price ? "Mua · " + money(offer.price) : "Đã nâng tối đa", "button quiet");
+        button.type = "button";
+        button.dataset.prepare = id;
+        button.disabled = Boolean(offer.block);
+        button.setAttribute("aria-label", (gearNames[id] ?? upgrade[0]) + " · " + button.textContent +
+          (offer.block ? " · " + blockedOffer[offer.block] : ""));
+        card.append(gearTitle(id, gearNames[id] ?? upgrade[0]), element("p", detail, "upgrade-current"), button);
+        if (offer.block) card.append(element("p", blockedOffer[offer.block], "upgrade-current"));
+        return card;
+      }));
+    });
+  }
+
   function shopCards(snapshot, tuning) {
     update("shop-upgrades", [snapshot.money, snapshot.upgrades, snapshot.active_upgrades, tuning.shop.upgrades], (container) => {
       const cards = Object.entries(tuning.shop.upgrades).filter(([id]) => noticeNames[id]).map(([id, levels]) => {
@@ -189,11 +230,12 @@ export function createCampaignView({ $, write, update, element, inventoryList, m
     const day = book.day(snapshot.day);
     const totalDays = tuning.day_plan.length;
     const current = snapshot.finished || snapshot.state === "finished" ? "summary" : snapshot.awaiting ?? snapshot.phase;
+    const preparing = current === "day_intro" && Boolean(snapshot.dive_gear?.offers);
     const key = snapshot.day + ":" + current;
     if (key !== screenKey) {
       cancelIntro();
       screenKey = key;
-      if (current === "day_intro") introTimer = setTimeout(() => proceed("day_intro"), 4000);
+      if (current === "day_intro" && !preparing) introTimer = setTimeout(() => proceed("day_intro"), 4000);
     }
     pause(snapshot.state === "paused", current === "shop" ? "Cửa hàng" : current === "gather" ? "Sông Chín Khúc" : "Nhà bè Má Tư");
     if (current === "gather" || current === "quan") return false;
@@ -212,19 +254,24 @@ export function createCampaignView({ $, write, update, element, inventoryList, m
     const itemized = Array.isArray(stock);
     $("shop-freshness-note").hidden = current !== "shop" || !itemized;
     $("shop-upgrades").hidden = current !== "shop";
-    $("journey-stats").hidden = !["day_result", "summary", "shop"].includes(current);
+    $("dive-preparation").hidden = !preparing;
+    $("journey-stats").hidden = !preparing && !["day_result", "summary", "shop"].includes(current);
     $("journey-end").hidden = current !== "summary";
     $("journey-title").dataset.screen = current;
     const plan = snapshot.day_plan;
 
     if (current === "day_intro") {
-      write("journey-title", "Má Tư dặn dò");
-      write("journey-copy", "Út ơi, coi thực đơn bữa nay rồi theo con nước kiếm nguyên liệu nghen!");
+      write("journey-title", preparing ? "Chuẩn bị ra sông" : "Má Tư dặn dò");
+      write("journey-copy", preparing ? "Chọn trang bị và xem nguyên liệu cần tìm cho ca tối." : "Út ơi, coi thực đơn bữa nay rồi theo con nước kiếm nguyên liệu nghen!");
       write("journey-stock-title", "Nguyên liệu cần tìm");
       write("journey-menu-title", "Món dự kiến");
       inventory(plan?.ingredients ?? {});
       list("journey-menu", plannedDishes(snapshot, tuning).map((id) =>
         dishName(id) + (plan?.dishes?.[id] ? " ×" + plan.dishes[id] : "")));
+      if (preparing) {
+        stats([["Tiền hiện có", money(snapshot.money)], ["Đạn mang theo", snapshot.dive_gear.ammo]]);
+        preparationCards(snapshot.dive_gear);
+      }
       nextButton(current, "Ra sông");
     } else if (current === "evening_intro") {
       const usable = availableCounts({ stock }, tuning.freshness);
@@ -270,6 +317,10 @@ export function createCampaignView({ $, write, update, element, inventoryList, m
   $("shop-upgrades").addEventListener("click", (event) => {
     const button = event.target.closest("[data-buy]");
     if (button && !button.disabled) action({ buy: button.dataset.buy });
+  });
+  $("dive-offers").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-prepare]");
+    if (button && !button.disabled) prepare(button.dataset.prepare);
   });
   return {
     render, pause, cancelIntro,
