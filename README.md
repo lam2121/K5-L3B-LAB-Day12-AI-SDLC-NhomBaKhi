@@ -15,13 +15,15 @@ Cách làm việc kỹ thuật là **tự do** (push thẳng, nhánh + PR, pair,
 
 ## Bắt đầu nhanh
 
+Yêu cầu Git, Python 3.10 trở lên và trình duyệt. Game dùng thư viện chuẩn Python. Benchmark cần thêm Chrome hoặc Chromium trên máy chạy.
+
 ```bash
-git clone <fork-của-nhóm> && cd <fork-của-nhóm>
+git clone https://github.com/lam2121/K5-L3B-LAB-Day12-AI-SDLC-NhomBaKhi.git chonoi-demo
+cd chonoi-demo
 python3 -m chonoi.live --mode gather
 ```
 
-Mở địa chỉ máy chủ in ra, mặc định `http://127.0.0.1:8000/`. Chọn **Bắt đầu hành trình** để xem vòng 5 ngày *Mùa Nước Nổi* qua các tình huống mẫu. Chọn **Chơi trọn ngày** để tự lặn bắt cá, thu hoạch rồi chuyển kho sang quán bằng sim của checkout hiện tại. Có thể vào thẳng **Buổi sáng** hoặc **Buổi tối**.
-Mở địa chỉ máy chủ in ra, mặc định `http://127.0.0.1:8000/`. Chọn **Chơi** để xem vòng 5 ngày *Mùa Nước Nổi*. Bản xem dùng snapshot mẫu v1.2. **Chơi trọn ngày**, **Chỉ chơi buổi sáng** và **Chỉ chơi buổi tối** dùng sim hiện tại.
+Mở địa chỉ máy chủ in ra, mặc định `http://127.0.0.1:8000/`. Chọn **Bắt đầu hành trình** để chơi *Mùa Nước Nổi* qua Gather → Quán → Shop trong năm ngày. Có thể vào riêng **Buổi sáng** hoặc **Buổi tối**. Nếu cổng 8000 đang bận, thêm `--port 8080`.
 
 ## Điều khiển
 
@@ -32,11 +34,11 @@ Mở địa chỉ máy chủ in ra, mặc định `http://127.0.0.1:8000/`. Ch�
 | Space | Bắt đàn cá gần khi đang lặn | |
 | R | Chơi lại buổi sáng | Chơi lại ca tối với kho đầu ca |
 
-Trong Phase 2, **Esc** hoặc **P** tạm dừng hoặc tiếp tục, kể cả khi ở cửa hàng. Bấm **Mua cấp** để mua nâng cấp và **Qua ngày mới** để đóng cửa hàng. Cấp đã mua bắt đầu áp dụng từ sáng hôm sau.
+Trong **Bắt đầu hành trình**, **Esc** hoặc **P** tạm dừng hoặc tiếp tục, kể cả khi ở cửa hàng. Bấm **Mua cấp** để mua nâng cấp và **Qua ngày mới** để đóng cửa hàng. Cấp đã mua bắt đầu áp dụng từ sáng hôm sau.
 
 Nút **Tương phản cao** nằm trên thanh trên cùng và trong màn tạm dừng. Trình duyệt lưu lựa chọn. Cảnh báo oxy thấp, thủy quái và khách sắp bỏ đi có cả chữ và biểu tượng.
 
-Buổi sáng ghi `inventory.json` khi kết thúc. Trong **Chơi trọn ngày**, màn chuyển ca hiện kho đã chốt. Chọn **Mở quán** để dùng kho đó cho ca tối. Khi chỉ chơi buổi tối, game dùng `inventory.json` nếu có hoặc [kho mẫu](docs/contracts/inventory.sample.json). Có thể chỉ định kho khác bằng `python3 -m chonoi.live --mode quan --inventory kho.json`, hoặc đổi tên file bàn giao bằng `--inventory-out kho.json` khi chạy `--mode gather`.
+Trong hành trình, **Mở quán** chuyển kho cá thể từ giỏ sáng sang ca tối trong cùng phiên. Buổi sáng độc lập ghi `inventory.json` khi kết thúc. Buổi tối độc lập đọc file đó nếu có, hoặc dùng [kho cá thể mẫu](docs/contracts/inventory.v12.sample.json). Dùng `python3 -m chonoi.live --mode quan --inventory kho.json` để chọn kho riêng.
 
 Điểm cuối ca bằng doanh thu cộng `reputation_multiplier × floor(uy tín)`, với hệ số trong [contract](game.contract.json) là 100. Tiền và boa hiển thị theo nghìn đồng.
 
@@ -44,11 +46,13 @@ Buổi sáng ghi `inventory.json` khi kết thúc. Trong **Chơi trọn ngày**,
 
 ```bash
 PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
+python3 -m chonoi.headless --mode day --seed 42 --days 5 --ticks 600 --out day.jsonl
+python3 -m chonoi.soak --seed 7 --days 10 --out soak.json
 ```
 
 Để kiểm danh sách thành viên và chạy cả suite bằng một lệnh, dùng `python3 tools/phase1.py verify`. Dùng `python3 tools/phase1.py smoke` nếu chỉ cần kiểm tra bàn giao kho giữa hai tiến trình. [Ma trận nghiệm thu Phase 1](docs/verification/phase-1.md)
 
-Game cần chế độ **headless** theo Test Contract (`python3 -m chonoi.headless --mode gather|quan …`) để được chạy và chấm tự động. **Công nghệ không ràng buộc**: khung Python trong `chonoi/` chỉ là gợi ý, chi tiết ở [`docs/STARTER.md`](docs/STARTER.md).
+Lệnh headless trên kiểm 600 tick đầu. `--inputs` nạp kịch bản thao tác, `--mode gather` và `--mode quan` chạy từng buổi. Lệnh soak chạy đủ 10 ngày bằng bot tất định. [Ma trận nghiệm thu Phase 4](docs/verification/phase-4.md)
 
 Khi cần kiểm tra UI riêng, chạy `python3 -m http.server 8000 --bind 127.0.0.1` ở gốc repo và mở `http://127.0.0.1:8000/chonoi/web/?preview=1`. Chọn chế độ, rồi nhấn **E** hoặc **Space** để duyệt các snapshot mẫu. Bản xem có thể đi qua luồng thu hoạch, chuyển kho, nấu, bưng, phục vụ, thanh toán và tổng kết.
 
