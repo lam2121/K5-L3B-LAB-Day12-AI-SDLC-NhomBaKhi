@@ -1,5 +1,5 @@
 # Changelog
-## Unreleased
+## [1.0.0] - 2026-11-21
 
 ### Phase 4
 
@@ -7,6 +7,10 @@
 - Nối Gather, Quán và Shop trong campaign thật trên live và headless. Giữ tiến độ xuyên ngày, hỗ trợ pause và áp dụng nâng cấp từ sáng kế tiếp.
 - Thêm tương phản cao, cảnh báo có chữ và biểu tượng cho oxy, thủy quái và khách sắp bỏ đi. Hoàn thiện menu và cảnh demo *Mùa Nước Nổi*.
 - Thêm phép đo render 30 giây và soak 10 ngày có thể lặp lại. [Bằng chứng Phase 4](docs/verification/phase-4.md)
+- Sửa snapshot ca tối để khách gắn với đúng bàn; dọn món của đơn khi khách rời, giữ chu trình khách đến → nấu → phục vụ → thanh toán.
+- Thêm atlas WebP và hoạt ảnh đi, bơi, cá quẫy, cá sấu tuần tra/truy đuổi cùng cảnh trời, núi, nhà sàn và vật dụng.
+- Thêm quầy trang bị trước khi lặn và cơ chế súng/đạn bong bóng trong Hành trình live; tiền thưởng được giữ qua ngày, không bật ở headless.
+- Nghiệm thu lại 69 test, hai lượt soak seed 7 (10/10 ngày, 0 crash), benchmark Gather seed 42 và demo thật. Xem [artifact](docs/proof/phase-4/).
 
 ### Phase 3
 

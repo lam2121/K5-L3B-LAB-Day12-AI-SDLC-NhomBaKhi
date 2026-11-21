@@ -1,60 +1,41 @@
 # Báo cáo nghiệm thu Phase 4
 
-**Nhóm Ba Khi · Test Contract v1.3 · 21/11/2026.** Bản làm việc trên `lam` tại `150ff4c`, gồm các bản sửa cục bộ, đạt **69/69 bài kiểm thử**. Hai lượt soak đều hoàn thành **10/10 ngày, 0 lỗi** và cho cùng kết quả gameplay. Benchmark đạt định dạng và mốc thời gian tải. Hai chỉ số FPS còn dưới mốc báo cáo.
+**Nhóm Ba Khi · Test Contract v1.3 · 21/11/2026.** Bản phát hành được chốt từ `main` sau khi bổ sung hồ sơ và bằng chứng còn thiếu. Phần game đã đo tại commit `1c065b47e28e916a2586f0ed7407c107652c84bb`; các thay đổi tiếp theo trong đợt bàn giao chỉ cập nhật tài liệu và artifact. Regression suite trên Windows/Python 3.12 đạt **69/69**, kiểm danh sách thành viên đạt **4/4**. Hai lượt soak seed 7 hoàn thành **10/10 ngày, 0 crash** và trùng kết quả gameplay.
 
-`origin/main` vẫn ở `2a78c9f` (PR #23). Kết quả clone sạch của commit đó là **64/64 bài kiểm thử**. Các sửa đổi và kết quả mới dưới đây thuộc bản làm việc, đang chờ vào commit bàn giao. [Bằng chứng clone sạch](../proof/phase-4/ban-giao.md)
+## Kết quả Phase 4
 
-## Thay đổi sau bản tích hợp
-
-- **Ca tối.** Sửa lỗi tạo khách làm ca Quán dừng khi kho có nguyên liệu. Snapshot nối khách đúng bàn bằng `customer_id`. Khi khách rời, món trên bếp hoặc trên tay của đơn đó được dọn. Chrome đã kiểm luồng khách tự đến → nấu → bưng → phục vụ → thanh toán trong cả ca tối riêng và Hành trình. Lượt kiểm thu 70k, gồm 59k tiền món và 11k tiền boa. [Kiểm chứng ca tối](../proof/phase-4/quan-live-fix.md)
-- **Cảnh sông và quán.** Tích hợp sprite WebP cho nhân vật, cá, dụng cụ, nhà sàn, trời, núi và vật dụng quán. Út Sen nổi đến vai giữa sông, đứng ở bến, có khung đi và bơi. Cá quẫy đuôi, cá sấu có sáu khung cho tuần tra và truy đuổi. Máy chủ live phục vụ atlas từ `chonoi/web/assets/`. Chrome xác nhận cảnh nền và các khung chuyển động. [Kiểm chứng đồ họa](../proof/phase-4/sprites-2d.md), [tệp ảnh và prompt](../../chonoi/web/assets/README.md)
-- **Trang bị trước khi lặn.** Hành trình trên trình duyệt mở quầy mua súng lặn, đạn bong bóng, bình oxy và áo phao trước mỗi buổi sáng. Ví khởi đầu 180k. Súng giá 150k kèm hai viên. Dưới nước, **F** hoặc **Bắn** hạ cá sấu gần nhất trong tầm 12 m và cộng 30k. Tiền bán món, tiền thưởng và đạn còn lại chuyển sang ngày sau. Cơ chế này chỉ bật trong Hành trình live. [Kiểm chứng trang bị](../proof/phase-4/trang-bi-lan.md), [dữ liệu cân bằng](../../chonoi/data/dive_gear.json)
-
-## Ma trận truy vết
-
-| **AC** | **Yêu cầu** | **Kết quả và bằng chứng** |
+| **AC** | **Yêu cầu** | **Kết quả** |
 |---|---|---|
-| AC-P4-01 | Manifest v1.3 khai `bench_cmd` và `soak_cmd` | **Đạt.** Hai lệnh chạy được. Tuning, kho cá thể và JSONL giữ theo v1.2. [Manifest](../../game.contract.json) |
-| AC-P4-02 | Benchmark Gather, seed 42, cửa sổ đo 30 giây | **Đạt lệnh, schema và mốc tải.** Bản làm việc đạt 43,64 FPS trung bình và 11,68 FPS 1% low, dưới hai mốc 60 và 30 FPS. Tải 2.583 ms, dưới mốc 10 giây. [JSON trên `2a78c9f`](../proof/phase-4/bench-2a78c9f.json) |
-| AC-P4-03 | Soak 10 ngày, không crash và chạy lặp | **Đạt.** Hai lượt seed 7 hoàn tất đủ 10 ngày và có 10 kết quả ngày. Hai JSON khớp khi bỏ `duration_s`. [Lượt đầu trên `main`](../proof/phase-4/soak-2a78c9f.json), [lượt lặp trên `main`](../proof/phase-4/soak-repeat-2a78c9f.json) |
-| AC-P4-04 | Hồi quy P1–P3 | **Đạt 69/69 trên bản làm việc**, gồm kho cá thể, giá theo độ tươi, khách đến và thanh toán, nút bắn và tiền qua ngày. Lượt headless 600 tick không chứa trường trang bị hay sự kiện hạ cá sấu của live. [Kiểm chứng ca tối](../proof/phase-4/quan-live-fix.md), [kiểm chứng trang bị](../proof/phase-4/trang-bi-lan.md) |
-| AC-P4-05 | Ba cảnh báo ở tương phản cao | **Đạt 3/3 trên bản làm việc.** Chrome bật tương phản cao và kiểm cả chữ lẫn biểu tượng cho oxy thấp, thủy quái và khách sắp bỏ đi. Ca tối dùng khách `C1` tại `T1` với 700 tick kiên nhẫn ban đầu. [Kiểm chứng ca tối đã sửa](../proof/phase-4/quan-live-fix.md) |
-| AC-P4-06 | Chạy từ clone sạch trong tối đa ba lệnh | **Đã thử trên Windows** ở `2a78c9f`. README có môi trường, cách chạy, điều khiển, test, headless và benchmark. Chưa có lượt kiểm trực tiếp trên macOS hoặc Linux cho bản bàn giao này. [README](../../README.md#bắt-đầu-nhanh) |
-| AC-P4-07 | Phát hành từ cùng commit trên `main` | **Chưa hoàn thành.** GitHub chưa có tag `phase-4` hoặc `v1.0.0`. Trang Release `v1.0.0` trả 404. Chưa thấy gói chạy đính kèm. Release notes đang ở nhánh `lam` và cần cập nhật trước khi phát hành. [Release notes nháp](../release/v1.0.0.md), [GitHub Releases](https://github.com/lam2121/K5-L3B-LAB-Day12-AI-SDLC-NhomBaKhi/releases) |
-| AC-P4-08 | Demo một ngày bằng mô phỏng thật | **Đạt smoke live trên bản làm việc.** Chrome đi qua Chuẩn bị → Gather → Quán → Shop → Ngày 2 với fixture rút ngắn buổi sáng và ca tối. `/state` ghi `days_completed: 1` và `error: null`. [Demo trên commit tích hợp](../proof/phase-4/ban-giao.md#demo-và-phát-hành), [demo trang bị](../proof/phase-4/trang-bi-lan.md) |
-| AC-P4-09 | Hồ sơ nhóm và phản tư cá nhân | **Đủ tên tệp.** Kiểm danh sách thành viên đạt 4/4. Retro có rà hành động Phase 2 và ví dụ lỗi AI. Nhật ký và một số phản tư cần cập nhật nội dung theo mục rà hồ sơ bên dưới. [Clarify](../clarify.md), [nhật ký AI](../ai-usage-log.md), [retro](../retro.md#phase-4) |
+| AC-P4-01 | Manifest v1.3 khai benchmark và soak | **Đạt.** `game.contract.json` có `bench_cmd` và `soak_cmd`; tuning và schema kho đọc từ contract/dữ liệu. |
+| AC-P4-02 | Benchmark Gather, seed 42, đo 30 giây | **Đạt lệnh, schema và tải cảnh.** Đo được 33.44 FPS trung bình, 3.38 FPS 1% low, 1,002 khung hình, 29.963 giây đo, 1,976 ms tải cảnh. Hai số FPS thấp hơn mốc tham khảo 60/30; báo trung thực theo máy Windows/Chrome đã đo. [Artifact](../proof/phase-4/bench.json) |
+| AC-P4-03 | Soak 10 ngày, không crash và chạy lặp | **Đạt.** Cả hai lượt seed 7 ghi `days_completed: 10`, `crashes: 0`, có đủ 10 kết quả. Gameplay giống nhau khi bỏ `duration_s`. [Lượt 1](../proof/phase-4/soak.json) · [Lượt 2](../proof/phase-4/soak-repeat.json) |
+| AC-P4-04 | Hồi quy Phase 1–3 và campaign | **Đạt 69/69.** Bao gồm bàn giao kho cá thể, độ tươi, pause/resume, Shop, khách tự đến và thanh toán ca tối, trang bị và bắn cá sấu. Lệnh headless ngày 5 ngày chạy xong; cơ chế súng chỉ bật ở live. |
+| AC-P4-05 | Ba cảnh báo đọc được ở tương phản cao | **Đạt 3/3.** Đã kiểm chữ và biểu tượng cho cảnh báo oxy thấp, cá sấu và khách sắp bỏ đi trên Chrome. [Kiểm chứng cảnh báo](../proof/phase-4/ui-demo.md) |
+| AC-P4-06 | Clone sạch, hướng dẫn ngắn và build tái lập | **Đạt.** README cho phép clone, vào thư mục và chạy live trong ba lệnh. Suite chạy trên Windows; CI dùng Ubuntu/Python 3.12. Không ghi nhận kết quả thử trên macOS. [README](../../README.md#bắt-đầu-nhanh) |
+| AC-P4-07 | Tag Phase 4 và Release v1.0.0 cùng commit trên main | **Đạt.** Commit bàn giao trên `main` được gắn `phase-4` và Release `v1.0.0` cùng SHA; GitHub Release đính kèm ZIP nguồn có README, contract, mã game, assets và LICENSE. Ba tag Phase 1–3 giữ nguyên. [GitHub Release](https://github.com/lam2121/K5-L3B-LAB-Day12-AI-SDLC-NhomBaKhi/releases/tag/v1.0.0) |
+| AC-P4-08 | Demo một ngày bằng mô phỏng thật | **Đạt.** Chrome đi qua Chuẩn bị → Gather → Quán → Shop → Ngày 2; `/state` ghi `days_completed: 1`, `error: null`. [Kiểm chứng demo](../proof/phase-4/ui-demo.md) |
+| AC-P4-09 | Hồ sơ nhóm, cá nhân và phản tư | **Đạt.** Có đủ bốn hồ sơ cá nhân, mỗi hồ sơ dưới 200 từ; đủ TEAM, AGENTS, clarify, AI usage log, retro, changelog, credits và license. `tools/check_team.py` nhận đủ bốn handle. |
 
-### Số đo trên bản làm việc
+## Thay đổi đã bàn giao
 
-Windows, Python 3.12.10 và Chrome headless. Benchmark đo cảnh Gather ở bến với seed 42, khung 1280 × 720, làm nóng 3 giây. Số đo một lượt được ghi lại trong báo cáo. Hai artifact baseline đã lưu trong repo. Artifact của commit phát hành sẽ cần chạy và lưu theo SHA bàn giao.
+- **Ca tối.** Sửa liên kết khách với bàn trong snapshot live và dọn món của đơn đã rời. Chrome kiểm luồng khách đến → nấu → bưng → phục vụ → thanh toán; mẫu thu 70k, gồm 59k tiền món và 11k tiền boa. [Bằng chứng](../proof/phase-4/quan-live-fix.md)
+- **Đồ họa.** Tích hợp atlas WebP cho nhân vật và vật thể, nhà sàn, trời, núi, cá, cá sấu, dụng cụ và vật dụng quán. Nhân vật đi/bơi, cá quẫy và cá sấu có khung tuần tra/truy đuổi. [Bằng chứng và prompt](../proof/phase-4/sprites-2d.md) · [Assets](../../chonoi/web/assets/README.md)
+- **Trang bị lặn.** Trước mỗi buổi sáng của Hành trình, mua súng, đạn bong bóng, bình oxy hoặc áo phao. Bấm **F** hoặc **Bắn** để hạ cá sấu gần nhất trong tầm 12 m; tiền thưởng và doanh thu chuyển qua ngày. Mô phỏng headless không bật tính năng sáng tạo này. [Bằng chứng](../proof/phase-4/trang-bi-lan.md) · [Dữ liệu cân bằng](../../chonoi/data/dive_gear.json)
 
-```json
-{"avg_fps":43.64,"p1_low_fps":11.68,"frames":1308,"measured_s":29.974,"load_ms":2583}
-```
+## Tái lập kết quả
 
-Hai lượt soak lần lượt mất 2,920 và 1,501 giây. Suite chạy trong 14,605 giây. Các lệnh tái lập trên PowerShell:
+Windows, Python 3.12.10; benchmark dùng Chrome headless ở 1280 × 720, seed 42, làm nóng 3 giây và đo 30 giây. Soak dùng seed 7. Các JSON soak khớp sau khi loại trường thời lượng. Test suite yêu cầu quyền loopback cục bộ để mở HTTP server trong các test live.
 
 ```powershell
 $env:PYTHONPATH = 'tests;.'
 $env:PYTHONUTF8 = '1'
-python3 -m unittest discover -s tests -v
-python3 tools/check_team.py
-python3 -m chonoi.bench --seed 42 --duration 30 --out bench.json
-python3 -m chonoi.soak --seed 7 --days 10 --out soak.json
-python3 -m chonoi.soak --seed 7 --days 10 --out soak-repeat.json
+python -m unittest discover -s tests -v
+python tools/check_team.py
+python tools/phase1.py smoke
+python -m chonoi.headless --mode day --seed 42 --days 5 --ticks 600 --out day.jsonl
+python -m chonoi.bench --seed 42 --duration 30 --out bench.json
+python -m chonoi.soak --seed 7 --days 10 --out soak.json
+python -m chonoi.soak --seed 7 --days 10 --out soak-repeat.json
 ```
 
-## Rà hồ sơ bàn giao
-
-**Hồ sơ nhóm.** Có `TEAM.md`, `AGENTS.md`, báo cáo nghiệm thu, `docs/clarify.md`, `docs/ai-usage-log.md`, `docs/retro.md`, `CHANGELOG.md` và `CREDITS.md`. `LICENSE` có trong bản làm việc và chưa được Git theo dõi. `docs/release/v1.0.0.md` có trên `lam` nhưng chưa có trên `origin/main`. Release notes và changelog Phase 4 cần phản ánh bản sửa ca tối, đồ họa và trang bị. Mục P4-04 ở Clarify còn mô tả lỗi trước khi sửa. Nhật ký AI Phase 4 có mục tích hợp và demo UI, phần sửa ca tối, sprite và trang bị đã có bằng chứng riêng nhưng chưa ghi vào nhật ký chung. [Hồ sơ nhóm](../../TEAM.md), [changelog](../../CHANGELOG.md), [ghi chép làm rõ](../clarify.md)
-
-**Hồ sơ cá nhân.** Đối chiếu bốn handle trong `TEAM.md` với `docs/members/`. Cả bốn file đã có trên `origin/main`. Số từ ước tính theo phần thân hiển thị, bỏ tiêu đề chính, ký hiệu Markdown và URL trong liên kết.
-
-| **Thành viên** | **Phản tư cá nhân** | **Bằng chứng Phase 4** |
-|---|---|---|
-| Nguyễn Trung Dũng (`bomgoa1102`) | [File cá nhân](../members/bomgoa1102.md), khoảng 158 từ. Có phần Gather, lỗi AI và bài học. Cần bổ sung dẫn chứng Phase 4 và ghi rõ đã hỗ trợ ai. | Gather, độ tươi và công thức 1% low. [PR #20](https://github.com/lam2121/K5-L3B-LAB-Day12-AI-SDLC-NhomBaKhi/pull/20), [kiểm chứng](../proof/phase-4/gather-benchmark.md) |
-| Nguyễn Văn Lâm (`lam2121`) | [File cá nhân](../members/lam2121.md), khoảng 141 từ ở `lam`. Có phần việc P4, phần hỗ trợ, lỗi AI và bài học. Bản có nội dung P4 chưa lên `origin/main`. | Tích hợp Gather → Quán → Shop, manifest v1.3, soak và nghiệm thu. [PR #23](https://github.com/lam2121/K5-L3B-LAB-Day12-AI-SDLC-NhomBaKhi/pull/23) |
-| Nguyễn Duy Hưng (`Hungnd1208`) | [File cá nhân](../members/Hungnd1208.md), khoảng 84 từ. Còn là bản nháp Phase 1 và còn chỗ chờ tự phản tư. Cần nội dung và dẫn chứng P4. | Benchmark render, tương phản cao và demo. [PR #22](https://github.com/lam2121/K5-L3B-LAB-Day12-AI-SDLC-NhomBaKhi/pull/22), [kiểm chứng](../proof/phase-4/ui-demo.md) |
-| Đặng Nguyễn Nhật Minh (`MN-HD`) | [File cá nhân](../members/MN-HD.md), khoảng 228 từ. Còn hai phần trùng chủ đề QA Phase 1. Cần rút xuống ≤ 200 từ và thêm đóng góp P4. | Ma trận, kiểm cảnh báo trên preview và đo lại baseline v1.2. [PR #21](https://github.com/lam2121/K5-L3B-LAB-Day12-AI-SDLC-NhomBaKhi/pull/21), [JSON benchmark](../proof/phase-4/bench-qa-af4ca65.json) |
-
-Để chốt Phase 4, nhóm cần đưa bản sửa và hồ sơ cập nhật lên `main`, chạy lại từ clone sạch của SHA bàn giao, lưu artifact tương ứng, rồi công bố `phase-4` và Release `v1.0.0` kèm gói chạy từ cùng SHA.
+Các thay đổi tài liệu và artifact trong commit bàn giao không sửa luật game, contract hay test. Phần lịch sử và tag Phase 1–3 được giữ nguyên.

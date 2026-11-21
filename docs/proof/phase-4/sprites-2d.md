@@ -1,9 +1,9 @@
 # Kiểm tra sprite 2D
 
-- `PYTHONPATH=tests:. python3 -m unittest discover -s tests -v` chạy qua 66 bài test. Trên Windows, `PYTHONPATH` dùng `tests;.`.
-- `node --check chonoi/web/art.js`, `node --check chonoi/web/assets/sprites.js` và `git diff --check` đều qua.
-- Chrome headless mở bản game cục bộ với seed 42. Canvas vẽ được đủ 15 vùng sprite trong hai cảnh. Cảnh lặn chuyển tư thế Út Sen khi bấm `W` lên mặt nước. Cảnh mở quán hiển thị ba mẫu khách và bật được chế độ tương phản cao. Không có lỗi JavaScript, hai atlas trả HTTP 200 với MIME `image/webp`.
-- Kiểm tra lại lỗi đứng giữa sông bằng Chrome headless. Bấm `W` ngoi lên, Canvas cắt sprite tại đường nước và vẽ gợn nước. Bấm `S` lặn lại, Canvas vẽ sprite bơi. Khi bắt đầu trên bến, Canvas vẽ đủ tư thế đứng. Cảnh mở quán tiếp tục tải sprite và không có lỗi JavaScript. Chạy lại 66 bài test đều qua.
-- Chrome headless giữ `D` trong hai cảnh với seed 42 và ghi nhận đủ ba khung bơi, ba khung đi bộ, đuôi cá đổi độ nghiêng và xuồng đổi vị trí theo thời gian. Canvas vẽ đủ ba mẫu nhà, nền trời và núi, lục bình, lau, đèn lồng, giỏ và chum đất. Cả năm atlas trả HTTP 200. Cảnh mở quán kiểm lại tùy chọn tương phản cao và chiều rộng 390 px. Không có lỗi JavaScript. Chạy lại 66 bài test đều qua.
-- Các phiên live khởi động trước khi thêm atlas cảnh nền trả 404 tại `/assets/landscape.webp`. Phiên live mới phục vụ các tệp WebP trong `chonoi/web/assets/`. Kiểm tra HTTP xác nhận hai atlas cảnh nền và cá sấu tải đúng MIME, đường dẫn thiếu hoặc ra ngoài thư mục trả 404.
-- Chrome headless vẽ bầu trời, núi, ba mẫu nhà sàn và đủ sáu khung cá sấu. Kiểm tra chuyển hướng trái/phải khi tuần tra, hướng bơi khi truy đuổi, cảnh xuất phát ở bến và cảnh mở quán. Không có lỗi JavaScript. Bộ Python chạy qua 67 bài test.
+Kiểm Chrome headless ở hai cảnh live. Máy chủ phục vụ atlas WebP từ `chonoi/web/assets/`; yêu cầu hợp lệ trả HTTP 200 với MIME `image/webp`, đường dẫn thiếu hoặc ngoài thư mục trả 404.
+
+- Út Sen đứng đúng trên bến và mặt nước, không vẽ chân lơ lửng trên sông. Khi lặn, Canvas cắt sprite ở đường nước và vẽ gợn nước; khi bơi/ngoi lên, đổi đúng tư thế.
+- Giữ hướng di chuyển để kiểm hoạt ảnh đi và bơi. Cá đổi tư thế đuôi, cá sấu có các khung tuần tra và đuổi theo người chơi.
+- Cảnh thể hiện trời, núi, nhà sàn, lục bình, lau, xuồng, đèn lồng, giỏ, chum và vật dụng quán. Cảnh ca tối tải atlas, hoạt ảnh khách và tương phản cao hoạt động.
+- Các cảnh được kiểm tại chiều rộng 390 px; không có lỗi JavaScript.
+- Regression suite hiện đạt **69/69**. Nguồn prompt và danh mục ảnh nằm trong [README assets](../../../chonoi/web/assets/README.md); ghi công ở [CREDITS](../../../CREDITS.md).

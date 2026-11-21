@@ -32,6 +32,7 @@ Mở địa chỉ máy chủ in ra, mặc định `http://127.0.0.1:8000/`. Ch�
 | WASD hoặc mũi tên | Bơi, `S` / `↓` để lặn | Đi lại, `W` / `↑` đi về phía bắc |
 | E | Hái rau hoặc cập bến | Tương tác với bếp hoặc bàn để nấu, bưng, phục vụ |
 | Space | Bắt đàn cá gần khi đang lặn | |
+| F | Bắn đạn bong bóng vào cá sấu gần nhất dưới nước trong Hành trình | |
 | R | Chơi lại buổi sáng | Chơi lại ca tối với kho đầu ca |
 
 Trong **Bắt đầu hành trình**, **Esc** hoặc **P** tạm dừng hoặc tiếp tục, kể cả khi ở cửa hàng. Bấm **Mua cấp** để mua nâng cấp và **Qua ngày mới** để đóng cửa hàng. Cấp đã mua bắt đầu áp dụng từ sáng hôm sau.

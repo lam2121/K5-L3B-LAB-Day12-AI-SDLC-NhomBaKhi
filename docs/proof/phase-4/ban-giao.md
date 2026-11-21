@@ -1,42 +1,31 @@
-# Kiểm chứng tích hợp Phase 4
+# Bằng chứng bàn giao Phase 4
 
-Ngày 2026-11-21. Kiểm từ hai clone sạch trên Windows PowerShell, Python 3.12.10 và Chrome headless. `main` tại `2a78c9f33ae6591b577831e3a7a18f07b86ca06c` gộp `a76673b065dceef4af3e6419beaa2537877caf52` qua PR #23. Hai SHA có cùng Git tree `e1b123cdadab45cc9bcbf071184f95383f7cd88f`. [PR #23](https://github.com/lam2121/K5-L3B-LAB-Day12-AI-SDLC-NhomBaKhi/pull/23)
+Ngày 21/11/2026 · Windows · Python 3.12.10 · Chrome. Mã game được kiểm tại `1c065b47e28e916a2586f0ed7407c107652c84bb`; commit phát hành chỉ thêm tài liệu và artifact. Các lệnh kiểm lại và kết quả cuối được tổng hợp trong [ma trận nghiệm thu](../../verification/phase-4.md).
 
-## Lệnh trên clone sạch
+## Clone sạch và hồi quy
 
 ```powershell
 $env:PYTHONPATH = 'tests;.'
 $env:PYTHONUTF8 = '1'
-python3 -m unittest discover -s tests -v
-python3 -m chonoi.bench --seed 42 --duration 30 --out bench.json
-python3 -m chonoi.soak --seed 7 --days 10 --out soak.json
-python3 -m chonoi.soak --seed 7 --days 10 --out soak-repeat.json
+python -m unittest discover -s tests -v
+python tools/check_team.py
+python tools/phase1.py smoke
+python -m chonoi.headless --mode day --seed 42 --days 5 --ticks 600 --out day.jsonl
 ```
 
-Manifest khai `contract_version: "1.3"`, `bench_cmd: "python3 -m chonoi.bench"` và `soak_cmd: "python3 -m chonoi.soak"`. Suite đạt **64/64** trên cả `a76673b` và `2a78c9f`. Lần chạy `main` mất 12,630 giây. Các ca hồi quy mua oxy, pause/resume, Cá Sấu, LIFO, kho cá thể, hàng ươn và chốt giá đều đạt.
+Kết quả: **69/69 test đạt**, danh sách thành viên **4/4**, smoke bàn giao kho **1/1**, mô phỏng headless đủ 5 ngày chạy thành công. Test live mở HTTP loopback; trên máy sandbox cần cho phép kết nối cục bộ để chạy phần này.
 
-## Benchmark
+## Benchmark và soak
 
-Cả hai lượt đo dùng seed 42, cảnh Gather ở bến, Chrome 1280 × 720, làm nóng 3 giây và cửa sổ đo 30 giây. Entrypoint xuất đủ `avg_fps`, `p1_low_fps`, `frames`, `measured_s` và `load_ms`. `p1_low_fps` lấy nghịch đảo trung bình thời lượng của 1% khung chậm nhất, lấy ít nhất một khung.
+Benchmark Gather seed 42 đo 30 giây, Chrome headless 1280 × 720, làm nóng 3 giây. Artifact có đủ năm trường theo schema: `avg_fps`, `p1_low_fps`, `frames`, `measured_s`, `load_ms`. Kết quả lần lượt là **33.44**, **3.38**, **1,002**, **29.963**, **1,976 ms**. Tải cảnh đạt mốc 10 giây; hai FPS thấp hơn mốc báo cáo 60/30.
 
-| **Commit và artifact** | **FPS trung bình** | **1% low FPS** | **Số khung** | **Đo (s)** | **Tải cảnh (ms)** |
-|---|---:|---:|---:|---:|---:|
-| `a76673b` · [JSON](bench-a76673b.json) | 26,43 | 3,49 | 792 | 29,969 | 1.499 |
-| `2a78c9f` (`main`) · [JSON](bench-2a78c9f.json) | 34,65 | 5,77 | 1.037 | 29,927 | 3.558 |
-| Mốc báo cáo | ≥ 60 | ≥ 30 | | | ≤ 10.000 |
-
-Lệnh và cấu trúc artifact đạt. Trên máy đo, cả hai lượt đạt mốc tải cảnh và chưa đạt hai mốc FPS. [Baseline trên v1.2](bench-qa-af4ca65.json) lưu số đo của checkout trước.
-
-## Soak
-
-Seed 7 trả `days: 10`, `days_completed: 10`, `crashes: 0` và 10 kết quả có `day`, `earned`, `reputation`, `score`. Hai lần chạy trên `2a78c9f` có kết quả gameplay giống hệt sau khi bỏ `duration_s`. Lượt đầu mất 1,848 giây, lượt lặp mất 1,058 giây. [Lượt đầu](soak-2a78c9f.json), [lượt lặp](soak-repeat-2a78c9f.json)
-
-## Tương phản cao
-
-- Chrome 1280 × 720 trên clone `2a78c9f`. Bật **Tương phản cao**, khởi động Gather với Út Sen ở `[60,24]`, còn 400 tick oxy và đang trong vùng Cá Sấu. Cả `#oxygen-alert` và `#monster-alert` hiện chữ cảnh báo cùng phần tử biểu tượng `.warning-icon`.
-- Kiểm riêng Quán với `C1` đang `waiting` ở `T1`, món cá lóc giữ `I1` và kiên nhẫn ban đầu 700 tick. Snapshot đo có 693 tick còn lại, dưới ngưỡng 900. `tables[].customer_id` vắng nên màn hình vẽ bàn trống. Chrome xác nhận 6 thẻ bếp/bàn và chưa có biểu tượng cảnh báo khách. Cảnh báo này từng đạt trên snapshot mẫu của QA. [Bằng chứng kiểm trên preview](ui-demo.md)
+Hai lượt soak seed 7 đều có `days_completed: 10`, `crashes: 0` và 10 kết quả ngày. Dữ liệu gameplay hai file giống nhau sau khi bỏ `duration_s`.
 
 ## Demo và phát hành
 
-- Chrome kiểm luồng **Bắt đầu hành trình → Gather → Quán → Shop → Ngày 2** trên `a76673b`. Ca tối được rút ngắn bằng fixture cho lần kiểm. `/config` công bố v1.3 và `campaign_v12`; `/state` trả `mode: "day"`, `day: 2`, `days_completed: 1`, `error: null`.
-- GitHub `main` tại `2a78c9f`. Khi kiểm, truy vấn refs chưa có `phase-4` hay `v1.0.0` và endpoint GitHub Release `v1.0.0` trả HTTP 404. Clone sạch chưa có `LICENSE`. [Release notes soạn sẵn](../../release/v1.0.0.md)
+- Chrome kiểm Bắt đầu hành trình → Chuẩn bị → Gather → Quán → Shop → Ngày 2 bằng mô phỏng thật. `/config` công bố contract v1.3; `/state` sau khi đóng ngày đầu ghi `days_completed: 1`, `error: null`.
+- Kiểm chữ và biểu tượng cho cảnh báo oxy, cá sấu và khách sắp bỏ đi ở chế độ tương phản cao. Kiểm riêng luồng ca tối và mua/bắn cá sấu trước khi lặn.
+- Release `v1.0.0` và tag `phase-4` gắn cùng commit trên `main`; ZIP nguồn đi kèm chứa mã game, assets, contract, README, CREDITS và LICENSE.
+- Phase 1, 2 và 3 giữ nguyên tag và hồ sơ nghiệm thu của từng phase.
+
+Chi tiết kiểm giao diện ở [UI demo](ui-demo.md), [ca tối](quan-live-fix.md), [sprite](sprites-2d.md) và [trang bị lặn](trang-bi-lan.md).
